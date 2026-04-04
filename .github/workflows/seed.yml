@@ -1,13 +1,11 @@
-name: Migrate
+name: Seed Database
 
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
 
 jobs:
-  migrate:
-    name: Run Migrations
+  seed:
+    name: Seed Database
     runs-on: ubuntu-latest
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
@@ -21,4 +19,4 @@ jobs:
           node-version: 20
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm run db:migrate
+      - run: pnpm run db:seed
