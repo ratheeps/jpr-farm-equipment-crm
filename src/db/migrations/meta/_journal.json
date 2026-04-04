@@ -8,6 +8,20 @@
       "when": 1775233161166,
       "tag": "0000_messy_bloodstrike",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1775292648621,
+      "tag": "0001_pale_doctor_spectrum",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1775294604059,
+      "tag": "0002_jazzy_joystick",
+      "breakpoints": true
     }
   ]
 }

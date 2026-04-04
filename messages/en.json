@@ -233,5 +233,56 @@
       "harvesting": "Harvesting",
       "completed": "Completed"
     }
+  },
+  "invoices": {
+    "title": "Invoices",
+    "add": "Create Invoice",
+    "edit": "Edit Invoice",
+    "invoiceNumber": "Invoice Number",
+    "clientName": "Client Name",
+    "clientPhone": "Client Phone",
+    "project": "Project",
+    "noProject": "No project",
+    "subtotal": "Subtotal",
+    "discount": "Discount",
+    "taxAmount": "Tax Amount",
+    "total": "Total",
+    "paymentDueDate": "Payment Due Date",
+    "paidDate": "Paid Date",
+    "addItem": "Add Line Item",
+    "removeItem": "Remove",
+    "description": "Description",
+    "quantity": "Qty",
+    "unit": "Unit",
+    "rate": "Rate",
+    "lineAmount": "Amount",
+    "noItems": "Add at least one line item",
+    "noInvoices": "No invoices yet",
+    "payments": "Payments",
+    "recordPayment": "Record Payment",
+    "paymentAmount": "Amount Paid",
+    "paymentType": "Payment Type",
+    "paymentDate": "Payment Date",
+    "totalPaid": "Total Paid",
+    "balanceDue": "Balance Due",
+    "noPayments": "No payments recorded",
+    "paymentTypes": {
+      "advance": "Advance",
+      "partial": "Partial",
+      "final": "Final"
+    },
+    "units": {
+      "hours": "Hours",
+      "acres": "Acres",
+      "km": "KM",
+      "tasks": "Tasks"
+    },
+    "statuses": {
+      "draft": "Draft",
+      "sent": "Sent",
+      "paid": "Paid",
+      "overdue": "Overdue",
+      "cancelled": "Cancelled"
+    }
   }
 }

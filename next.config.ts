@@ -16,6 +16,7 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [],
   },
+  transpilePackages: ["@react-pdf/renderer"],
 };
 
 export default withSerwist(withNextIntl(nextConfig));

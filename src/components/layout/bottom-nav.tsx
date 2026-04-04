@@ -7,7 +7,6 @@ import {
   LayoutDashboard,
   Wallet,
   FolderKanban,
-  Wheat,
   MoreHorizontal,
   ClipboardList,
   Receipt,
@@ -25,10 +24,10 @@ type NavItem = {
 
 const ownerNavItems: NavItem[] = [
   { href: "/owner", labelKey: "dashboard", icon: LayoutDashboard },
-  { href: "/owner/finance", labelKey: "finance", icon: Wallet },
   { href: "/admin/projects", labelKey: "projects", icon: FolderKanban },
-  { href: "/admin/farms", labelKey: "farms", icon: Wheat },
-  { href: "/owner/more", labelKey: "more", icon: MoreHorizontal },
+  { href: "/admin/invoices", labelKey: "invoices", icon: Receipt },
+  { href: "/owner/finance", labelKey: "finance", icon: Wallet },
+  { href: "/admin/more", labelKey: "more", icon: MoreHorizontal },
 ];
 
 const adminNavItems: NavItem[] = [

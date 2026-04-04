@@ -233,5 +233,56 @@
       "harvesting": "அறுவடை",
       "completed": "முடிந்தது"
     }
+  },
+  "invoices": {
+    "title": "இன்வாய்சுகள்",
+    "add": "இன்வாய்ஸ் உருவாக்கு",
+    "edit": "இன்வாய்ஸ் திருத்து",
+    "invoiceNumber": "இன்வாய்ஸ் எண்",
+    "clientName": "வாடிக்கையாளர் பெயர்",
+    "clientPhone": "வாடிக்கையாளர் தொலைபேசி",
+    "project": "திட்டம்",
+    "noProject": "திட்டம் இல்லை",
+    "subtotal": "உபமொத்தம்",
+    "discount": "தள்ளுபடி",
+    "taxAmount": "வரி தொகை",
+    "total": "மொத்தம்",
+    "paymentDueDate": "கட்டண கடைசி தேதி",
+    "paidDate": "செலுத்திய தேதி",
+    "addItem": "வரி சேர்",
+    "removeItem": "நீக்கு",
+    "description": "விவரம்",
+    "quantity": "எண்ணிக்கை",
+    "unit": "அலகு",
+    "rate": "விகிதம்",
+    "lineAmount": "தொகை",
+    "noItems": "குறைந்தது ஒரு வரி சேர்க்கவும்",
+    "noInvoices": "இன்வாய்சுகள் இல்லை",
+    "payments": "கட்டணங்கள்",
+    "recordPayment": "கட்டணம் பதிவு",
+    "paymentAmount": "செலுத்திய தொகை",
+    "paymentType": "கட்டண வகை",
+    "paymentDate": "கட்டண தேதி",
+    "totalPaid": "மொத்த செலுத்தல்",
+    "balanceDue": "நிலுவை தொகை",
+    "noPayments": "கட்டணங்கள் பதிவு இல்லை",
+    "paymentTypes": {
+      "advance": "முன்பணம்",
+      "partial": "பகுதி கட்டணம்",
+      "final": "இறுதி கட்டணம்"
+    },
+    "units": {
+      "hours": "மணிநேரம்",
+      "acres": "ஏக்கர்",
+      "km": "கி.மீ.",
+      "tasks": "பணிகள்"
+    },
+    "statuses": {
+      "draft": "வரைவு",
+      "sent": "அனுப்பப்பட்டது",
+      "paid": "செலுத்தப்பட்டது",
+      "overdue": "தாமதம்",
+      "cancelled": "ரத்து செய்யப்பட்டது"
+    }
   }
 }

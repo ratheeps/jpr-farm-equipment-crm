@@ -233,5 +233,56 @@
       "harvesting": "අස්වැන්න නෙළීම",
       "completed": "සම්පූර්ණ"
     }
+  },
+  "invoices": {
+    "title": "ඉන්වොයිස්",
+    "add": "ඉන්වොයිස් සාදන්න",
+    "edit": "ඉන්වොයිස් සංස්කරණය",
+    "invoiceNumber": "ඉන්වොයිස් අංකය",
+    "clientName": "ගනුදෙනුකරු නම",
+    "clientPhone": "ගනුදෙනුකරු දුරකථනය",
+    "project": "ව්‍යාපෘතිය",
+    "noProject": "ව්‍යාපෘතියක් නැත",
+    "subtotal": "උප එකතුව",
+    "discount": "වට්ටම",
+    "taxAmount": "බදු මුදල",
+    "total": "මුළු",
+    "paymentDueDate": "ගෙවීම් අවසාන දිනය",
+    "paidDate": "ගෙවූ දිනය",
+    "addItem": "ලයිනය එකතු කරන්න",
+    "removeItem": "ඉවත් කරන්න",
+    "description": "විස්තරය",
+    "quantity": "ප්‍රමාණය",
+    "unit": "ඒකකය",
+    "rate": "අනුපාතය",
+    "lineAmount": "මුදල",
+    "noItems": "අවම වශයෙන් එක් ලයිනයක් එකතු කරන්න",
+    "noInvoices": "ඉන්වොයිස් නොමැත",
+    "payments": "ගෙවීම්",
+    "recordPayment": "ගෙවීම වාර්තා කරන්න",
+    "paymentAmount": "ගෙවූ මුදල",
+    "paymentType": "ගෙවීම් වර්ගය",
+    "paymentDate": "ගෙවීම් දිනය",
+    "totalPaid": "මුළු ගෙවූ",
+    "balanceDue": "ශේෂ මුදල",
+    "noPayments": "ගෙවීම් වාර්තා නොමැත",
+    "paymentTypes": {
+      "advance": "අත්තිකාරම්",
+      "partial": "අර්ධ",
+      "final": "අවසන්"
+    },
+    "units": {
+      "hours": "පැය",
+      "acres": "අක්කර",
+      "km": "කි.මී.",
+      "tasks": "කාර්ය"
+    },
+    "statuses": {
+      "draft": "කෙටුම්පත",
+      "sent": "යවා ඇත",
+      "paid": "ගෙවා ඇත",
+      "overdue": "කල් ඉකුත්",
+      "cancelled": "අවලංගු"
+    }
   }
 }
