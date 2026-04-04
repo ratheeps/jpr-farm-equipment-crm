@@ -36,8 +36,10 @@ export default async function DashboardLayout({
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Main content — padded bottom for bottom nav height */}
-      <main className="pb-20">{children}</main>
+      {/* Main content — padded bottom for nav bar + safe area */}
+      <main className="pb-[calc(4rem+env(safe-area-inset-bottom,0px))]">
+        {children}
+      </main>
       <BottomNav role={navKey} />
     </div>
   );

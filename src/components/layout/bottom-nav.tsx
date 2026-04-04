@@ -70,7 +70,7 @@ export function BottomNav({ role }: BottomNavProps) {
   const navItems = roleNavMap[role] ?? operatorNavItems;
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background border-t border-border">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-md border-t border-border/60 shadow-[0_-1px_12px_rgba(0,0,0,0.06)]">
       <div className="flex items-stretch h-16 pb-safe">
         {navItems.map((item) => {
           const Icon = item.icon;
@@ -83,18 +83,30 @@ export function BottomNav({ role }: BottomNavProps) {
             <Link
               key={item.href}
               href={href}
-              className={cn(
-                "flex-1 flex flex-col items-center justify-center gap-0.5 text-xs transition-colors touch-target",
-                isActive
-                  ? "text-primary"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
+              className="flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors"
             >
-              <Icon
-                className={cn("h-5 w-5", isActive && "text-primary")}
-                strokeWidth={isActive ? 2.5 : 2}
-              />
-              <span className={cn("text-[10px]", isActive && "font-semibold")}>
+              {/* Icon with active pill background */}
+              <div
+                className={cn(
+                  "flex items-center justify-center w-10 h-7 rounded-2xl transition-all",
+                  isActive
+                    ? "bg-primary/12 text-primary"
+                    : "text-muted-foreground"
+                )}
+              >
+                <Icon
+                  className="h-5 w-5"
+                  strokeWidth={isActive ? 2.5 : 1.8}
+                />
+              </div>
+              <span
+                className={cn(
+                  "text-[10px] leading-none",
+                  isActive
+                    ? "font-semibold text-primary"
+                    : "text-muted-foreground"
+                )}
+              >
                 {t(item.labelKey as Parameters<typeof t>[0])}
               </span>
             </Link>

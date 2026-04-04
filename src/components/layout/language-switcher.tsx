@@ -3,6 +3,7 @@
 import { useLocale } from "next-intl";
 import { useRouter, usePathname } from "next/navigation";
 import { locales, localeNames, type Locale } from "@/i18n/config";
+import { Globe } from "lucide-react";
 
 export function LanguageSwitcher() {
   const locale = useLocale() as Locale;
@@ -11,34 +12,30 @@ export function LanguageSwitcher() {
 
   function switchLocale(newLocale: Locale) {
     if (newLocale === locale) return;
-    // Replace locale prefix in current path
     const segments = pathname.split("/");
     segments[1] = newLocale;
-    const newPath = segments.join("/");
-    // Persist preference to server
+    router.replace(segments.join("/"));
     fetch("/api/auth/locale", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ locale: newLocale }),
     });
-    router.replace(newPath);
   }
 
   return (
-    <div className="flex items-center gap-1">
-      {locales.map((l) => (
-        <button
-          key={l}
-          onClick={() => switchLocale(l)}
-          className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
-            l === locale
-              ? "bg-primary text-primary-foreground"
-              : "text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          {localeNames[l]}
-        </button>
-      ))}
+    <div className="relative flex items-center">
+      <Globe className="absolute left-2.5 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+      <select
+        value={locale}
+        onChange={(e) => switchLocale(e.target.value as Locale)}
+        className="h-9 pl-7 pr-2 rounded-xl bg-secondary text-secondary-foreground text-xs font-medium appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring"
+      >
+        {locales.map((l) => (
+          <option key={l} value={l}>
+            {localeNames[l]}
+          </option>
+        ))}
+      </select>
     </div>
   );
 }
