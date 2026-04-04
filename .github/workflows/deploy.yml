@@ -9,6 +9,7 @@ jobs:
   migrate:
     name: Run Migrations
     runs-on: ubuntu-latest
+    environment: production
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
     steps:
