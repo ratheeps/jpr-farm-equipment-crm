@@ -13,6 +13,7 @@ import {
   Clock,
   FileBarChart,
   ArrowLeftRight,
+  Wheat,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -26,8 +27,8 @@ const ownerNavItems: NavItem[] = [
   { href: "/owner", labelKey: "dashboard", icon: LayoutDashboard },
   { href: "/admin/projects", labelKey: "projects", icon: FolderKanban },
   { href: "/admin/invoices", labelKey: "invoices", icon: Receipt },
+  { href: "/admin/farms", labelKey: "farms", icon: Wheat },
   { href: "/owner/finance", labelKey: "finance", icon: Wallet },
-  { href: "/admin/more", labelKey: "more", icon: MoreHorizontal },
 ];
 
 const adminNavItems: NavItem[] = [

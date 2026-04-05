@@ -1,25 +1,30 @@
 import { getTranslations } from "next-intl/server";
 import { Topbar } from "@/components/layout/topbar";
 import { db } from "@/db";
-import { vehicles, projects, loans, receivables } from "@/db/schema";
+import { vehicles, projects, loans, receivables, paddyFarms, maintenanceSchedules } from "@/db/schema";
 import { eq, count, sum, and } from "drizzle-orm";
+import Link from "next/link";
 
 export default async function OwnerDashboard({
   params,
 }: {
   params: Promise<{ locale: string }>;
 }) {
-  await params;
+  const { locale } = await params;
   const tCommon = await getTranslations("common");
   const tFinance = await getTranslations("finance");
   const tVehicles = await getTranslations("vehicles");
   const tProjects = await getTranslations("projects");
+  const tFarms = await getTranslations("farms");
+  const tMaintenance = await getTranslations("maintenance");
 
   const [
     activeVehiclesResult,
     activeProjectsResult,
     totalDebtResult,
     totalReceivablesResult,
+    activeFarmsResult,
+    overdueMaintenanceResult,
   ] = await Promise.all([
     db
       .select({ count: count() })
@@ -41,12 +46,22 @@ export default async function OwnerDashboard({
           eq(receivables.status, "pending")
         )
       ),
+    db
+      .select({ count: count() })
+      .from(paddyFarms)
+      .where(eq(paddyFarms.isActive, true)),
+    db
+      .select({ count: count() })
+      .from(maintenanceSchedules)
+      .where(eq(maintenanceSchedules.isOverdue, true)),
   ]);
 
   const activeVehicles = activeVehiclesResult[0]?.count ?? 0;
   const activeProjects = activeProjectsResult[0]?.count ?? 0;
   const totalDebt = Number(totalDebtResult[0]?.total ?? 0);
   const totalReceivables = Number(totalReceivablesResult[0]?.total ?? 0);
+  const activeFarms = activeFarmsResult[0]?.count ?? 0;
+  const overdueMaintenanceCount = overdueMaintenanceResult[0]?.count ?? 0;
 
   return (
     <div>
@@ -54,18 +69,36 @@ export default async function OwnerDashboard({
       <div className="px-4 py-4 space-y-4">
         {/* Summary cards row */}
         <div className="grid grid-cols-2 gap-3">
-          <StatCard
-            label={tVehicles("title")}
-            value={String(activeVehicles)}
-            subtitle={tCommon("active")}
-            color="green"
-          />
+          <Link href={`/${locale}/admin/vehicles`}>
+            <StatCard
+              label={tVehicles("title")}
+              value={String(activeVehicles)}
+              subtitle={tCommon("active")}
+              color="green"
+            />
+          </Link>
           <StatCard
             label={tProjects("title")}
             value={String(activeProjects)}
             subtitle={tCommon("active")}
             color="blue"
           />
+          <Link href={`/${locale}/admin/farms`}>
+            <StatCard
+              label={tFarms("title")}
+              value={String(activeFarms)}
+              subtitle={tCommon("active")}
+              color="yellow"
+            />
+          </Link>
+          <Link href={`/${locale}/admin/maintenance`}>
+            <StatCard
+              label={tMaintenance("title")}
+              value={String(overdueMaintenanceCount)}
+              subtitle={overdueMaintenanceCount > 0 ? tMaintenance("overdue") : tMaintenance("allClear")}
+              color={overdueMaintenanceCount > 0 ? "red" : "green"}
+            />
+          </Link>
         </div>
 
         {/* Financial summary */}

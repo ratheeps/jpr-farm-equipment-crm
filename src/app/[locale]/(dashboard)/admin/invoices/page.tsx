@@ -1,7 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import { Topbar } from "@/components/layout/topbar";
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { Plus, FileText } from "lucide-react";
 import { getSession } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
 import { getInvoices } from "@/lib/actions/invoices";
@@ -19,7 +19,10 @@ export default async function InvoicesPage({
     redirect(`/${locale}/operator`);
   }
 
-  const t = await getTranslations("invoices");
+  const [t, tQ] = await Promise.all([
+    getTranslations("invoices"),
+    getTranslations("quotes"),
+  ]);
 
   const allInvoices = await getInvoices();
 
@@ -29,10 +32,17 @@ export default async function InvoicesPage({
       <div className="px-4 py-4">
         <Link
           href={`/${locale}/admin/invoices/new`}
-          className="flex items-center justify-center gap-2 w-full h-12 bg-primary text-primary-foreground rounded-xl font-semibold mb-4"
+          className="flex items-center justify-center gap-2 w-full h-12 bg-primary text-primary-foreground rounded-xl font-semibold mb-3"
         >
           <Plus className="h-5 w-5" />
           {t("add")}
+        </Link>
+        <Link
+          href={`/${locale}/admin/quotes`}
+          className="flex items-center justify-center gap-2 w-full h-11 border border-border rounded-xl text-sm font-medium text-foreground mb-4"
+        >
+          <FileText className="h-4 w-4" />
+          {tQ("title")}
         </Link>
 
         {allInvoices.length === 0 ? (

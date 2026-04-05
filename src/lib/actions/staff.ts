@@ -103,3 +103,44 @@ export async function getStaffList() {
     .leftJoin(staffProfiles, eq(staffProfiles.userId, users.id))
     .orderBy(staffProfiles.fullName);
 }
+
+export async function getStaff(userId: string) {
+  const session = await requireSession();
+  if (!isRole(session, "super_admin", "admin")) {
+    throw new Error("Forbidden");
+  }
+
+  const results = await db
+    .select({
+      userId: users.id,
+      phone: users.phone,
+      role: users.role,
+      preferredLocale: users.preferredLocale,
+      isActive: users.isActive,
+      fullName: staffProfiles.fullName,
+      staffPhone: staffProfiles.phone,
+      nicNumber: staffProfiles.nicNumber,
+      payRate: staffProfiles.payRate,
+      payType: staffProfiles.payType,
+    })
+    .from(users)
+    .leftJoin(staffProfiles, eq(staffProfiles.userId, users.id))
+    .where(eq(users.id, userId))
+    .limit(1);
+
+  return results[0] ?? null;
+}
+
+export async function deactivateStaff(userId: string) {
+  const session = await requireSession();
+  if (!isRole(session, "super_admin")) {
+    throw new Error("Forbidden");
+  }
+
+  await db
+    .update(users)
+    .set({ isActive: false, updatedAt: new Date() })
+    .where(eq(users.id, userId));
+
+  revalidatePath("/admin/staff");
+}
