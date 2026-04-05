@@ -3,7 +3,8 @@ import { Topbar } from "@/components/layout/topbar";
 import { OfflineBanner } from "@/components/offline-banner";
 import { ExpenseForm } from "@/components/operator/expense-form";
 import { getMyExpenses } from "@/lib/actions/expenses";
-import { getActiveVehicles } from "@/lib/actions/daily-logs";
+import { getMyAssignedProjects, getTodayLog, getActiveProjects } from "@/lib/actions/daily-logs";
+import { getMyAssignedVehicles } from "@/lib/actions/vehicle-assignments";
 import { Receipt } from "lucide-react";
 
 const categoryColors: Record<string, string> = {
@@ -23,10 +24,16 @@ export default async function OperatorExpensesPage() {
   const t = await getTranslations("operator");
   const tCat = await getTranslations("expenses.categories");
 
-  const [myExpenses, vehicles] = await Promise.all([
+  const [myExpenses, vehicles, assignedProjects, activeLog, allProjects] = await Promise.all([
     getMyExpenses(30),
-    getActiveVehicles(),
+    getMyAssignedVehicles(),
+    getMyAssignedProjects(),
+    getTodayLog(),
+    getActiveProjects(),
   ]);
+
+  // Use assigned projects when available, fall back to all active projects
+  const projects = assignedProjects.length > 0 ? assignedProjects : allProjects;
 
   const totalToday = myExpenses
     .filter(
@@ -52,6 +59,9 @@ export default async function OperatorExpensesPage() {
 
         <ExpenseForm
           vehicles={vehicles.map((v) => ({ id: v.id, name: v.name }))}
+          projects={projects.map((p) => ({ id: p.id, clientName: p.clientName }))}
+          defaultProjectId={activeLog?.projectId ?? null}
+          defaultVehicleId={activeLog?.vehicleId ?? null}
         />
 
         <div className="space-y-3">

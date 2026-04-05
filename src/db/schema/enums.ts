@@ -79,6 +79,31 @@ export const expenseCategoryEnum = pgEnum("expense_category", [
   "misc",
 ]);
 
+export const leaveTypeEnum = pgEnum("leave_type", [
+  "annual",
+  "sick",
+  "unpaid",
+  "other",
+]);
+
+export const leaveStatusEnum = pgEnum("leave_status", [
+  "pending",
+  "approved",
+  "rejected",
+]);
+
+export const shiftTypeEnum = pgEnum("shift_type", [
+  "morning",
+  "afternoon",
+  "full_day",
+]);
+
+export const payrollStatusEnum = pgEnum("payroll_status", [
+  "draft",
+  "finalized",
+  "paid",
+]);
+
 export const loanTypeEnum = pgEnum("loan_type", [
   "bank_loan",
   "personal_borrowing",

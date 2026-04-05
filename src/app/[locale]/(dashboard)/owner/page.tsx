@@ -27,6 +27,8 @@ export default async function OwnerDashboard({
   const tProjects = await getTranslations("projects");
   const tFarms = await getTranslations("farms");
   const tMaintenance = await getTranslations("maintenance");
+  const tAlerts = await getTranslations("alerts");
+  const tDashboard = await getTranslations("dashboard");
 
   const [
     activeVehiclesResult,
@@ -136,21 +138,21 @@ export default async function OwnerDashboard({
 
         {/* Expense Alerts */}
         <div>
-          <h2 className="text-base font-semibold text-foreground mb-3">Alerts</h2>
+          <h2 className="text-base font-semibold text-foreground mb-3">{tAlerts("title")}</h2>
           <ExpenseAlerts alerts={expenseAlerts} />
         </div>
 
         {/* Fleet Status Map */}
         <div>
-          <h2 className="text-base font-semibold text-foreground mb-3">Fleet Positions</h2>
+          <h2 className="text-base font-semibold text-foreground mb-3">{tDashboard("fleetPositions")}</h2>
           <FleetMapClient positions={fleetPositions} />
         </div>
 
         {/* Asset Profitability */}
         {assetProfitability.length > 0 && (
           <div>
-            <h2 className="text-base font-semibold text-foreground mb-1">Asset Costs</h2>
-            <p className="text-xs text-muted-foreground mb-3">Total recorded expenses per vehicle</p>
+            <h2 className="text-base font-semibold text-foreground mb-1">{tDashboard("assetCosts")}</h2>
+            <p className="text-xs text-muted-foreground mb-3">{tDashboard("assetCostsDesc")}</p>
             <div className="bg-card border border-border rounded-xl p-3">
               <ProfitabilityChart data={assetProfitability} />
             </div>
@@ -160,8 +162,8 @@ export default async function OwnerDashboard({
         {/* Farm ROI */}
         {farmROI.length > 0 && (
           <div>
-            <h2 className="text-base font-semibold text-foreground mb-1">Farm ROI</h2>
-            <p className="text-xs text-muted-foreground mb-3">Return on investment per active farm</p>
+            <h2 className="text-base font-semibold text-foreground mb-1">{tDashboard("farmRoi")}</h2>
+            <p className="text-xs text-muted-foreground mb-3">{tDashboard("farmRoiDesc")}</p>
             <div className="bg-card border border-border rounded-xl p-3">
               <FarmROIChart data={farmROI} />
             </div>

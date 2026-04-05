@@ -60,7 +60,21 @@
     "logWork": "வேலை பதிவு",
     "history": "வரலாறு",
     "transactions": "பரிவர்த்தனைகள்",
-    "export": "ஏற்றுமதி"
+    "export": "ஏற்றுமதி",
+    "manageVehicles": "வாகனங்கள் நிர்வாகம்",
+    "maintenance": "வாகன பராமரிப்பு",
+    "manageStaff": "ஊழியர் நிர்வாகம்",
+    "recordInput": "வயல் உள்ளீடு பதிவு",
+    "recordHarvest": "அறுவடை பதிவு",
+    "quotes": "மேற்கோள்கள்",
+    "settings": "அமைப்புகள்",
+    "changePassword": "கடவுச்சொல் மாற்று",
+    "leaves": "விடுப்பு நிர்வாகம்",
+    "payroll": "சம்பள பட்டியல்",
+    "schedule": "அட்டவணை",
+    "staffPerformance": "ஊழியர் செயல்திறன்",
+    "leave": "விடுப்பு கோரிக்கை",
+    "auditorFinance": "நிதி"
   },
   "vehicles": {
     "title": "வாகனங்கள்",
@@ -486,5 +500,105 @@
       "overdue": "தாமதம்",
       "cancelled": "ரத்து செய்யப்பட்டது"
     }
+  },
+  "vehicleAssignments": {
+    "title": "ஆபரேட்டர் நியமனம்",
+    "assign": "ஆபரேட்டர் நியமி",
+    "primary": "முதன்மை",
+    "temporary": "தற்காலிக",
+    "assignedFrom": "இருந்து",
+    "assignedTo": "வரை",
+    "reason": "காரணம்",
+    "noPrimary": "முதன்மை ஆபரேட்டர் இல்லை",
+    "reasonPlaceholder": "e.g. விடுப்பு மாற்றீடு",
+    "setPrimary": "முதன்மை ஆபரேட்டராக அமை",
+    "assignedVehicle": "உங்கள் நியமிக்கப்பட்ட வாகனம்"
+  },
+  "leaves": {
+    "title": "விடுப்பு கோரிக்கைகள்",
+    "request": "விடுப்பு கோரு",
+    "leaveType": "விடுப்பு வகை",
+    "startDate": "தொடக்க தேதி",
+    "endDate": "முடிவு தேதி",
+    "reason": "காரணம்",
+    "status": "நிலை",
+    "approve": "அனுமதி",
+    "reject": "மறு",
+    "days": "நாட்கள்",
+    "types": {
+      "annual": "ஆண்டு விடுப்பு",
+      "sick": "நோய் விடுப்பு",
+      "unpaid": "சம்பளமில்லா விடுப்பு",
+      "other": "பிற"
+    },
+    "statuses": {
+      "pending": "நிலுவையில்",
+      "approved": "அனுமதிக்கப்பட்டது",
+      "rejected": "மறுக்கப்பட்டது"
+    },
+    "noRequests": "விடுப்பு கோரிக்கைகள் இல்லை",
+    "myRequests": "என் கோரிக்கைகள்"
+  },
+  "schedule": {
+    "title": "ஆபரேட்டர் அட்டவணை",
+    "add": "அட்டவணை சேர்",
+    "shift": "ஷிஃப்ட்",
+    "shiftTypes": {
+      "morning": "காலை",
+      "afternoon": "மதியம்",
+      "full_day": "முழு நாள்"
+    },
+    "noSchedules": "இந்த காலகட்டத்தில் அட்டவணை இல்லை",
+    "prevWeek": "முந்தைய",
+    "nextWeek": "அடுத்த"
+  },
+  "payroll": {
+    "title": "சம்பள கணக்கீடு",
+    "generate": "அனைவருக்கும் உருவாக்கு",
+    "generating": "உருவாக்குகிறது...",
+    "periodStart": "காலம் தொடக்கம்",
+    "periodEnd": "காலம் முடிவு",
+    "totalNetPayroll": "மொத்த நிகர சம்பளம்",
+    "records": "பதிவுகள்",
+    "basePay": "அடிப்படை சம்பளம்",
+    "performanceBonus": "செயல்திறன் போனஸ்",
+    "netPay": "நிகர சம்பளம்",
+    "workDays": "வேலை நாட்கள்",
+    "leaveDays": "விடுப்பு நாட்கள்",
+    "finalize": "இறுதிப்படுத்து",
+    "markPaid": "செலுத்தியதாக குறி",
+    "noPayroll": "பதிவுகள் இல்லை",
+    "statuses": {
+      "draft": "வரைவு",
+      "finalized": "இறுதிப்படுத்தப்பட்டது",
+      "paid": "செலுத்தப்பட்டது"
+    }
+  },
+  "performance": {
+    "title": "பணியாளர் செயல்திறன்",
+    "idle": "செயலற்ற",
+    "logs": "பதிவுகள்",
+    "hours": "மணிநேரம்",
+    "fuel": "எரிபொருள்",
+    "acres": "ஏக்கர்",
+    "km": "கிமீ",
+    "noData": "தரவு இல்லை"
+  },
+  "alerts": {
+    "title": "எச்சரிக்கைகள்",
+    "allClear": "அனைத்தும் சாதாரண வரம்பிற்குள்",
+    "critical": "அவசரம்",
+    "warning": "எச்சரிக்கை",
+    "idling": "{idleRatio}% செயலற்ற விகிதம் — {hours} மணி உற்பத்தியற்றது",
+    "fuelOver": "எரிபொருள் {pct}% அதிகமாக பதிவு செய்யப்பட்டது ({liters}L)",
+    "fuelUnder": "எரிபொருள் {pct}% குறைவாக பதிவு செய்யப்பட்டது ({liters}L)",
+    "maintenanceOverdue": "{count, plural, one {# சேவை தாமதமானது} other {# சேவைகள் தாமதமானது}}: {types}"
+  },
+  "dashboard": {
+    "fleetPositions": "வாகன நிலைகள்",
+    "assetCosts": "சொத்து செலவுகள்",
+    "assetCostsDesc": "ஒவ்வொரு வாகனத்தின் மொத்த பதிவு செலவுகள்",
+    "farmRoi": "பண்ணை முதலீட்டு வருவாய்",
+    "farmRoiDesc": "செயல்பாட்டில் உள்ள ஒவ்வொரு பண்ணையின் முதலீட்டு வருவாய்"
   }
 }

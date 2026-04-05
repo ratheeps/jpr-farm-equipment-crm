@@ -1,3 +1,6 @@
+"use client";
+
+import { useTranslations } from "next-intl";
 import { AlertTriangle, Gauge, Fuel, Wrench } from "lucide-react";
 import type { ExpenseAlert } from "@/lib/actions/reports";
 import { cn } from "@/lib/utils";
@@ -13,11 +16,23 @@ const TYPE_ICON = {
 };
 
 export function ExpenseAlerts({ alerts }: Props) {
+  const t = useTranslations("alerts");
+
+  function getAlertMessage(alert: ExpenseAlert): string {
+    if (alert.type === "idling") {
+      return t("idling", { idleRatio: alert.idleRatio, hours: alert.hours });
+    }
+    if (alert.type === "fuel_anomaly") {
+      return t(alert.over ? "fuelOver" : "fuelUnder", { pct: alert.pct, liters: alert.liters });
+    }
+    return t("maintenanceOverdue", { count: alert.count, types: alert.types });
+  }
+
   if (alerts.length === 0) {
     return (
       <div className="flex items-center gap-2 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-xl px-4 py-3">
         <AlertTriangle className="h-4 w-4 text-green-600 flex-shrink-0" />
-        <p className="text-sm text-green-700 dark:text-green-400">All systems within normal thresholds</p>
+        <p className="text-sm text-green-700 dark:text-green-400">{t("allClear")}</p>
       </div>
     );
   }
@@ -58,7 +73,7 @@ export function ExpenseAlerts({ alerts }: Props) {
                   isCritical ? "text-red-700 dark:text-red-400" : "text-orange-700 dark:text-orange-400"
                 )}
               >
-                {alert.message}
+                {getAlertMessage(alert)}
               </p>
             </div>
             <span
@@ -69,7 +84,7 @@ export function ExpenseAlerts({ alerts }: Props) {
                   : "bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300"
               )}
             >
-              {isCritical ? "Critical" : "Warning"}
+              {isCritical ? t("critical") : t("warning")}
             </span>
           </div>
         );

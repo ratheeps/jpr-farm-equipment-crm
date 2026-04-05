@@ -26,9 +26,13 @@ export const staffProfiles = pgTable("staff_profiles", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
-export const staffProfilesRelations = relations(staffProfiles, ({ one }) => ({
+export const staffProfilesRelations = relations(staffProfiles, ({ one, many }) => ({
   user: one(users, {
     fields: [staffProfiles.userId],
     references: [users.id],
   }),
+  vehicleAssignments: many(vehicleAssignments),
 }));
+
+// Forward references
+import { vehicleAssignments } from "./vehicles";

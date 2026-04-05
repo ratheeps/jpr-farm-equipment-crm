@@ -14,9 +14,10 @@ import {
   farmCycles,
   farmInputs,
   farmHarvests,
+  users,
 } from "@/db/schema";
 import { requireSession, isRole } from "@/lib/auth/session";
-import { eq, isNotNull, sql, not, and } from "drizzle-orm";
+import { eq, isNotNull, sql, not, and, desc, gte, lte } from "drizzle-orm";
 
 // ─── Fuel Efficiency Report ──────────────────────────────────────────────────
 
@@ -671,13 +672,32 @@ export async function getAllFarmROI(): Promise<FarmROIRow[]> {
 
 // ─── Expense Alerts (for Owner Dashboard) ─────────────────────────────────────
 
-export type ExpenseAlert = {
-  type: "idling" | "fuel_anomaly" | "maintenance_overdue";
-  severity: "warning" | "critical";
-  vehicleName: string;
-  message: string;
-  value: number;
-};
+export type ExpenseAlert =
+  | {
+      type: "idling";
+      severity: "warning" | "critical";
+      vehicleName: string;
+      value: number;
+      idleRatio: number;
+      hours: number;
+    }
+  | {
+      type: "fuel_anomaly";
+      severity: "warning" | "critical";
+      vehicleName: string;
+      value: number;
+      pct: number;
+      liters: number;
+      over: boolean;
+    }
+  | {
+      type: "maintenance_overdue";
+      severity: "warning" | "critical";
+      vehicleName: string;
+      value: number;
+      count: number;
+      types: string;
+    };
 
 export async function getExpenseAlerts(): Promise<ExpenseAlert[]> {
   const session = await requireSession();
@@ -699,16 +719,18 @@ export async function getExpenseAlerts(): Promise<ExpenseAlert[]> {
         type: "idling",
         severity: "critical",
         vehicleName: row.vehicleName,
-        message: `${row.idleRatioPct}% idle ratio — ${row.nonProductiveEngineHours} hrs unproductive`,
         value: row.idleRatioPct,
+        idleRatio: row.idleRatioPct,
+        hours: row.nonProductiveEngineHours,
       });
     } else if (row.idleRatioPct >= 20) {
       alerts.push({
         type: "idling",
         severity: "warning",
         vehicleName: row.vehicleName,
-        message: `${row.idleRatioPct}% idle ratio — ${row.nonProductiveEngineHours} hrs unproductive`,
         value: row.idleRatioPct,
+        idleRatio: row.idleRatioPct,
+        hours: row.nonProductiveEngineHours,
       });
     }
   }
@@ -721,8 +743,10 @@ export async function getExpenseAlerts(): Promise<ExpenseAlert[]> {
       type: "fuel_anomaly",
       severity: Math.abs(pct) >= 50 ? "critical" : "warning",
       vehicleName: row.vehicleName,
-      message: `Fuel ${positive ? "over" : "under"}-reported by ${Math.abs(pct)}% (${Math.abs(row.discrepancyLiters ?? 0)}L)`,
       value: pct,
+      pct: Math.abs(pct),
+      liters: Math.abs(row.discrepancyLiters ?? 0),
+      over: positive,
     });
   }
 
@@ -731,8 +755,9 @@ export async function getExpenseAlerts(): Promise<ExpenseAlert[]> {
       type: "maintenance_overdue",
       severity: "critical",
       vehicleName: row.vehicleName,
-      message: `${row.overdueCount} overdue service${row.overdueCount > 1 ? "s" : ""}: ${row.overdueTypes.join(", ")}`,
       value: row.overdueCount,
+      count: row.overdueCount,
+      types: row.overdueTypes.join(", "),
     });
   }
 
@@ -741,4 +766,88 @@ export async function getExpenseAlerts(): Promise<ExpenseAlert[]> {
     if (a.severity !== "critical" && b.severity === "critical") return 1;
     return 0;
   });
+}
+
+// ─── Staff Performance Report ─────────────────────────────────────────────────
+
+export type StaffPerformanceRow = {
+  staffProfileId: string;
+  staffName: string;
+  phone: string | null;
+  totalLogs: number;
+  totalHours: number;
+  totalFuelLiters: number;
+  totalAcres: number;
+  totalKm: number;
+  idleRatioPct: number | null;
+};
+
+export async function getStaffPerformance(
+  dateFrom?: string,
+  dateTo?: string
+): Promise<StaffPerformanceRow[]> {
+  const session = await requireSession();
+  if (!isRole(session, "super_admin", "admin", "auditor")) throw new Error("Forbidden");
+
+  const conditions = [eq(users.role, "operator"), eq(users.isActive, true)];
+
+  const rows = await db
+    .select({
+      staffProfileId: staffProfiles.id,
+      staffName: staffProfiles.fullName,
+      phone: staffProfiles.phone,
+      totalLogs: sql<string>`COUNT(${dailyLogs.id})`,
+      totalHours: sql<string>`COALESCE(SUM(${dailyLogs.endEngineHours} - ${dailyLogs.startEngineHours}), 0)`,
+      totalFuelLiters: sql<string>`COALESCE(SUM(${dailyLogs.fuelUsedLiters}), 0)`,
+      totalAcres: sql<string>`COALESCE(SUM(${dailyLogs.acresWorked}), 0)`,
+      totalKm: sql<string>`COALESCE(SUM(${dailyLogs.kmTraveled}), 0)`,
+      productiveHours: sql<string>`COALESCE(SUM(
+        CASE WHEN ${dailyLogs.acresWorked} > 0 OR ${dailyLogs.kmTraveled} > 0
+          THEN ${dailyLogs.endEngineHours} - ${dailyLogs.startEngineHours}
+          ELSE 0 END
+      ), 0)`,
+    })
+    .from(staffProfiles)
+    .innerJoin(users, eq(staffProfiles.userId, users.id))
+    .leftJoin(
+      dailyLogs,
+      and(
+        eq(dailyLogs.operatorId, staffProfiles.id),
+        isNotNull(dailyLogs.endEngineHours),
+        dateFrom ? gte(dailyLogs.date, dateFrom) : undefined,
+        dateTo ? lte(dailyLogs.date, dateTo) : undefined
+      )
+    )
+    .where(and(...conditions))
+    .groupBy(staffProfiles.id, staffProfiles.fullName, staffProfiles.phone)
+    .orderBy(staffProfiles.fullName);
+
+  return rows.map((r) => {
+    const totalH = Number(r.totalHours);
+    const prodH = Number(r.productiveHours);
+    const idleRatio =
+      totalH > 0 ? Math.round(((totalH - prodH) / totalH) * 100) : null;
+    return {
+      staffProfileId: r.staffProfileId,
+      staffName: r.staffName,
+      phone: r.phone,
+      totalLogs: Number(r.totalLogs),
+      totalHours: totalH,
+      totalFuelLiters: Number(r.totalFuelLiters),
+      totalAcres: Number(r.totalAcres),
+      totalKm: Number(r.totalKm),
+      idleRatioPct: idleRatio,
+    };
+  });
+}
+
+export async function getTopPerformers(
+  dateFrom?: string,
+  dateTo?: string,
+  limit = 5
+): Promise<StaffPerformanceRow[]> {
+  const all = await getStaffPerformance(dateFrom, dateTo);
+  return all
+    .sort((a, b) => b.totalHours - a.totalHours)
+    .slice(0, limit);
 }

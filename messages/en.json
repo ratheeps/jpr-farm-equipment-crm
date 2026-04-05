@@ -60,7 +60,21 @@
     "logWork": "Log Work",
     "history": "History",
     "transactions": "Transactions",
-    "export": "Export"
+    "export": "Export",
+    "manageVehicles": "Manage Vehicles",
+    "maintenance": "Vehicle Maintenance",
+    "manageStaff": "Manage Staff",
+    "recordInput": "Record Farm Input",
+    "recordHarvest": "Record Farm Harvest",
+    "quotes": "Quotes",
+    "settings": "Settings",
+    "changePassword": "Change Password",
+    "leaves": "Staff Leaves",
+    "payroll": "Payroll",
+    "schedule": "Schedule",
+    "staffPerformance": "Staff Performance",
+    "leave": "Leave Request",
+    "auditorFinance": "Finance"
   },
   "vehicles": {
     "title": "Vehicles",
@@ -486,5 +500,105 @@
       "overdue": "Overdue",
       "cancelled": "Cancelled"
     }
+  },
+  "vehicleAssignments": {
+    "title": "Operator Assignment",
+    "assign": "Assign Operator",
+    "primary": "Primary",
+    "temporary": "Temporary",
+    "assignedFrom": "From",
+    "assignedTo": "Until",
+    "reason": "Reason",
+    "noPrimary": "No primary operator assigned",
+    "reasonPlaceholder": "e.g. leave cover, breakdown",
+    "setPrimary": "Set as primary operator",
+    "assignedVehicle": "Your assigned vehicle"
+  },
+  "leaves": {
+    "title": "Leave Requests",
+    "request": "Request Leave",
+    "leaveType": "Leave Type",
+    "startDate": "Start Date",
+    "endDate": "End Date",
+    "reason": "Reason",
+    "status": "Status",
+    "approve": "Approve",
+    "reject": "Reject",
+    "days": "days",
+    "types": {
+      "annual": "Annual Leave",
+      "sick": "Sick Leave",
+      "unpaid": "Unpaid Leave",
+      "other": "Other"
+    },
+    "statuses": {
+      "pending": "Pending",
+      "approved": "Approved",
+      "rejected": "Rejected"
+    },
+    "noRequests": "No leave requests yet",
+    "myRequests": "My Requests"
+  },
+  "schedule": {
+    "title": "Operator Schedule",
+    "add": "Add Schedule Entry",
+    "shift": "Shift",
+    "shiftTypes": {
+      "morning": "Morning",
+      "afternoon": "Afternoon",
+      "full_day": "Full Day"
+    },
+    "noSchedules": "No schedules for this period",
+    "prevWeek": "Prev",
+    "nextWeek": "Next"
+  },
+  "payroll": {
+    "title": "Payroll",
+    "generate": "Generate for All Operators",
+    "generating": "Generating...",
+    "periodStart": "Period Start",
+    "periodEnd": "Period End",
+    "totalNetPayroll": "Total Net Payroll",
+    "records": "records",
+    "basePay": "Base Pay",
+    "performanceBonus": "Performance Bonus",
+    "netPay": "Net Pay",
+    "workDays": "Work Days",
+    "leaveDays": "Leave Days",
+    "finalize": "Finalize",
+    "markPaid": "Mark Paid",
+    "noPayroll": "No payroll records. Generate payroll for a period above.",
+    "statuses": {
+      "draft": "Draft",
+      "finalized": "Finalized",
+      "paid": "Paid"
+    }
+  },
+  "performance": {
+    "title": "Staff Performance",
+    "idle": "idle",
+    "logs": "Logs",
+    "hours": "Hours",
+    "fuel": "Fuel",
+    "acres": "Acres",
+    "km": "KM",
+    "noData": "No performance data for this period"
+  },
+  "alerts": {
+    "title": "Alerts",
+    "allClear": "All systems within normal thresholds",
+    "critical": "Critical",
+    "warning": "Warning",
+    "idling": "{idleRatio}% idle ratio — {hours} hrs unproductive",
+    "fuelOver": "Fuel over-reported by {pct}% ({liters}L)",
+    "fuelUnder": "Fuel under-reported by {pct}% ({liters}L)",
+    "maintenanceOverdue": "{count, plural, one {# overdue service} other {# overdue services}}: {types}"
+  },
+  "dashboard": {
+    "fleetPositions": "Fleet Positions",
+    "assetCosts": "Asset Costs",
+    "assetCostsDesc": "Total recorded expenses per vehicle",
+    "farmRoi": "Farm ROI",
+    "farmRoiDesc": "Return on investment per active farm"
   }
 }

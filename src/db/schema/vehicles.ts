@@ -6,6 +6,8 @@ import {
   numeric,
   integer,
   text,
+  boolean,
+  date,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import {
@@ -13,6 +15,7 @@ import {
   billingModelEnum,
   vehicleStatusEnum,
 } from "./enums";
+import { staffProfiles } from "./staff";
 
 export const vehicles = pgTable("vehicles", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -41,14 +44,45 @@ export const vehicles = pgTable("vehicles", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
+export const vehicleAssignments = pgTable("vehicle_assignments", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  vehicleId: uuid("vehicle_id")
+    .notNull()
+    .references(() => vehicles.id, { onDelete: "cascade" }),
+  staffId: uuid("staff_id")
+    .notNull()
+    .references(() => staffProfiles.id, { onDelete: "cascade" }),
+  assignedFrom: date("assigned_from").notNull(),
+  assignedTo: date("assigned_to"), // null = indefinite
+  isPrimary: boolean("is_primary").notNull().default(true),
+  reason: text("reason"), // e.g. "leave cover", "breakdown"
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 export const vehiclesRelations = relations(vehicles, ({ many }) => ({
   dailyLogs: many(dailyLogs),
   maintenanceRecords: many(maintenanceRecords),
   maintenanceSchedules: many(maintenanceSchedules),
   expenses: many(expenses),
   projectAssignments: many(projectAssignments),
+  vehicleAssignments: many(vehicleAssignments),
   loans: many(loans),
 }));
+
+export const vehicleAssignmentsRelations = relations(
+  vehicleAssignments,
+  ({ one }) => ({
+    vehicle: one(vehicles, {
+      fields: [vehicleAssignments.vehicleId],
+      references: [vehicles.id],
+    }),
+    staff: one(staffProfiles, {
+      fields: [vehicleAssignments.staffId],
+      references: [staffProfiles.id],
+    }),
+  })
+);
 
 // Forward references — defined in other files
 import { dailyLogs } from "./daily-logs";

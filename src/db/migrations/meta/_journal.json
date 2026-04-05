@@ -43,6 +43,20 @@
       "when": 1775389233267,
       "tag": "0005_normal_lady_ursula",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1775407396728,
+      "tag": "0006_stale_winter_soldier",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1775412362695,
+      "tag": "0007_elite_mariko_yashida",
+      "breakpoints": true
     }
   ]
 }

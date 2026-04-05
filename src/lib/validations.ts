@@ -500,3 +500,72 @@ export function validateReceivable(data: {
     notes: assertOptionalString(data.notes),
   };
 }
+
+const LEAVE_TYPES = ["annual", "sick", "unpaid", "other"] as const;
+const SHIFT_TYPES = ["morning", "afternoon", "full_day"] as const;
+const PAYROLL_STATUSES = ["draft", "finalized", "paid"] as const;
+
+export function validateVehicleAssignment(data: {
+  vehicleId?: unknown;
+  staffId?: unknown;
+  assignedFrom?: unknown;
+  assignedTo?: unknown;
+  isPrimary?: unknown;
+  reason?: unknown;
+}) {
+  return {
+    vehicleId: assertUUID(data.vehicleId, "vehicleId"),
+    staffId: assertUUID(data.staffId, "staffId"),
+    assignedFrom: assertDate(data.assignedFrom, "assignedFrom"),
+    assignedTo: assertOptionalDate(data.assignedTo),
+    isPrimary: data.isPrimary !== false,
+    reason: assertOptionalString(data.reason),
+  };
+}
+
+export function validateLeave(data: {
+  leaveType?: unknown;
+  startDate?: unknown;
+  endDate?: unknown;
+  reason?: unknown;
+}) {
+  return {
+    leaveType: assertEnum(data.leaveType, "leaveType", LEAVE_TYPES),
+    startDate: assertDate(data.startDate, "startDate"),
+    endDate: assertDate(data.endDate, "endDate"),
+    reason: assertOptionalString(data.reason),
+  };
+}
+
+export function validateSchedule(data: {
+  staffId?: unknown;
+  vehicleId?: unknown;
+  projectId?: unknown;
+  date?: unknown;
+  shiftType?: unknown;
+  notes?: unknown;
+}) {
+  return {
+    staffId: assertUUID(data.staffId, "staffId"),
+    vehicleId: assertOptionalUUID(data.vehicleId),
+    projectId: assertOptionalUUID(data.projectId),
+    date: assertDate(data.date, "date"),
+    shiftType: assertEnum(data.shiftType, "shiftType", SHIFT_TYPES),
+    notes: assertOptionalString(data.notes),
+  };
+}
+
+export function validatePayrollGeneration(data: {
+  staffId?: unknown;
+  periodStart?: unknown;
+  periodEnd?: unknown;
+}) {
+  const start = assertDate(data.periodStart, "periodStart");
+  const end = assertDate(data.periodEnd, "periodEnd");
+  if (start > end) throw new ValidationError("periodStart must be before periodEnd");
+  return {
+    staffId: assertUUID(data.staffId, "staffId"),
+    periodStart: start,
+    periodEnd: end,
+  };
+}

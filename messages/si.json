@@ -60,7 +60,21 @@
     "logWork": "කාර්ය ලොග",
     "history": "ඉතිහාසය",
     "transactions": "ගනුදෙනු",
-    "export": "අපනයනය"
+    "export": "අපනයනය",
+    "manageVehicles": "රථ කළමනාකරණය",
+    "maintenance": "රථ නඩත්තුව",
+    "manageStaff": "කාර්ය මණ්ඩල කළමනාකරණය",
+    "recordInput": "ගොවිපළ ආදාන සටහන",
+    "recordHarvest": "අස්වනු සටහන",
+    "quotes": "මිල ගණන්",
+    "settings": "සැකසීම්",
+    "changePassword": "මුරපදය වෙනස් කරන්න",
+    "leaves": "නිවාඩු කළමනාකරණය",
+    "payroll": "වැටුප් ලේඛනය",
+    "schedule": "කාලසටහන",
+    "staffPerformance": "කාර්ය මණ්ඩල කාර්ය සාධනය",
+    "leave": "නිවාඩු ඉල්ලීම",
+    "auditorFinance": "මූල්‍ය"
   },
   "vehicles": {
     "title": "යාත්‍රා",
@@ -482,5 +496,105 @@
       "overdue": "කල් ඉකුත්",
       "cancelled": "අවලංගු"
     }
+  },
+  "vehicleAssignments": {
+    "title": "ක්‍රියාකරු පැවරුම",
+    "assign": "ක්‍රියාකරු පත් කරන්න",
+    "primary": "ප්‍රාථමික",
+    "temporary": "තාවකාලික",
+    "assignedFrom": "සිට",
+    "assignedTo": "දක්වා",
+    "reason": "හේතුව",
+    "noPrimary": "ප්‍රාථමික ක්‍රියාකරු නැත",
+    "reasonPlaceholder": "e.g. නිවාඩු ආවරණය",
+    "setPrimary": "ප්‍රාථමික ක්‍රියාකරු ලෙස සකසන්න",
+    "assignedVehicle": "ඔබගේ පැවරූ වාහනය"
+  },
+  "leaves": {
+    "title": "නිවාඩු ඉල්ලීම්",
+    "request": "නිවාඩු ඉල්ලන්න",
+    "leaveType": "නිවාඩු වර්ගය",
+    "startDate": "ආරම්භ දිනය",
+    "endDate": "අවසාන දිනය",
+    "reason": "හේතුව",
+    "status": "තත්වය",
+    "approve": "අනුමත කරන්න",
+    "reject": "ප්‍රතික්ෂේප කරන්න",
+    "days": "දින",
+    "types": {
+      "annual": "වාර්ෂික නිවාඩු",
+      "sick": "රෝගී නිවාඩු",
+      "unpaid": "වැටුප් රහිත නිවාඩු",
+      "other": "වෙනත්"
+    },
+    "statuses": {
+      "pending": "අපේක්ෂාව",
+      "approved": "අනුමත",
+      "rejected": "ප්‍රතික්ෂේප"
+    },
+    "noRequests": "නිවාඩු ඉල්ලීම් නැත",
+    "myRequests": "මගේ ඉල්ලීම්"
+  },
+  "schedule": {
+    "title": "ක්‍රියාකරු කාලසටහන",
+    "add": "කාලසටහන් ඇතුළත් කරන්න",
+    "shift": "වාරය",
+    "shiftTypes": {
+      "morning": "උදෑසන",
+      "afternoon": "දහවල්",
+      "full_day": "සම්පූර්ණ දිනය"
+    },
+    "noSchedules": "මෙම කාලය සඳහා කාලසටහන නැත",
+    "prevWeek": "පෙර",
+    "nextWeek": "ඊළඟ"
+  },
+  "payroll": {
+    "title": "වැටුප් ගණනය",
+    "generate": "සියලු ක්‍රියාකරුවන් සඳහා ජනනය",
+    "generating": "ජනනය වෙමින්...",
+    "periodStart": "කාල ආරම්භය",
+    "periodEnd": "කාල අවසානය",
+    "totalNetPayroll": "මුළු ශුද්ධ වැටුප",
+    "records": "වාර්තා",
+    "basePay": "මූලික වැටුප",
+    "performanceBonus": "කාර්ය සාධන දීමනා",
+    "netPay": "ශුද්ධ වැටුප",
+    "workDays": "කාර්ය දින",
+    "leaveDays": "නිවාඩු දින",
+    "finalize": "අවසන් කරන්න",
+    "markPaid": "ගෙවූ ලෙස සලකුණු",
+    "noPayroll": "වාර්තා නැත",
+    "statuses": {
+      "draft": "කෙටුම්පත",
+      "finalized": "අවසන්",
+      "paid": "ගෙවා"
+    }
+  },
+  "performance": {
+    "title": "කාර්ය සාධනය",
+    "idle": "අක්‍රිය",
+    "logs": "ලොග",
+    "hours": "පැය",
+    "fuel": "ඉන්ධන",
+    "acres": "අක්කර",
+    "km": "කිමී",
+    "noData": "දත්ත නැත"
+  },
+  "alerts": {
+    "title": "අනතුරු ඇඟවීම්",
+    "allClear": "සියලු පද්ධති සාමාන්‍ය සීමාවන් තුළ",
+    "critical": "බරපතල",
+    "warning": "අනතුරු ඇඟවීම",
+    "idling": "{idleRatio}% අක්‍රිය අනුපාතය — {hours} පැය ඵලදායී නොවේ",
+    "fuelOver": "ඉන්ධන {pct}% ඉක්මවා වාර්තා කර ඇත ({liters}L)",
+    "fuelUnder": "ඉන්ධන {pct}% අඩුවෙන් වාර්තා කර ඇත ({liters}L)",
+    "maintenanceOverdue": "{count, plural, one {# කාලය ඉකුත් සේවාවක්} other {# කාලය ඉකුත් සේවා}}: {types}"
+  },
+  "dashboard": {
+    "fleetPositions": "යාත්‍රා ස්ථාන",
+    "assetCosts": "වත්කම් පිරිවැය",
+    "assetCostsDesc": "වාහනයකට ගිණුම් ගත මුළු වියදම",
+    "farmRoi": "ගොවිපල ROI",
+    "farmRoiDesc": "සෑම ක්‍රියාකාරී ගොවිපලක ආයෝජන ප්‍රතිලාභය"
   }
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
@@ -13,9 +14,9 @@ import {
   Clock,
   FileBarChart,
   ArrowLeftRight,
-  Wheat,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { SlidingMenu } from "@/components/layout/sliding-menu";
 
 type NavItem = {
   href: string;
@@ -23,11 +24,11 @@ type NavItem = {
   icon: React.ElementType;
 };
 
+// Owner: Dashboard, Projects, Invoices, Finance, More (Farms moved to sliding menu)
 const ownerNavItems: NavItem[] = [
   { href: "/owner", labelKey: "dashboard", icon: LayoutDashboard },
   { href: "/admin/projects", labelKey: "projects", icon: FolderKanban },
   { href: "/admin/invoices", labelKey: "invoices", icon: Receipt },
-  { href: "/admin/farms", labelKey: "farms", icon: Wheat },
   { href: "/owner/finance", labelKey: "finance", icon: Wallet },
 ];
 
@@ -36,7 +37,6 @@ const adminNavItems: NavItem[] = [
   { href: "/admin/projects", labelKey: "projects", icon: FolderKanban },
   { href: "/admin/invoices", labelKey: "invoices", icon: Receipt },
   { href: "/admin/staff", labelKey: "staff", icon: ClipboardList },
-  { href: "/admin/more", labelKey: "more", icon: MoreHorizontal },
 ];
 
 const operatorNavItems: NavItem[] = [
@@ -69,51 +69,79 @@ export function BottomNav({ role }: BottomNavProps) {
   const locale = useLocale();
   const pathname = usePathname();
   const navItems = roleNavMap[role] ?? operatorNavItems;
+  const [menuOpen, setMenuOpen] = useState(false);
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-md border-t border-border/60 shadow-[0_-1px_12px_rgba(0,0,0,0.06)]">
-      <div className="flex items-stretch h-16 pb-safe">
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          const href = `/${locale}${item.href}`;
-          const isActive =
-            pathname === href ||
-            (item.href !== `/${role}` && pathname.startsWith(href));
+    <>
+      <SlidingMenu open={menuOpen} onClose={() => setMenuOpen(false)} role={role} />
 
-          return (
-            <Link
-              key={item.href}
-              href={href}
-              className="flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors"
+      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-md border-t border-border/60 shadow-[0_-1px_12px_rgba(0,0,0,0.06)]">
+        <div className="flex items-stretch h-16 pb-safe">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const href = `/${locale}${item.href}`;
+            const isActive =
+              pathname === href ||
+              (item.href !== `/${role}` && pathname.startsWith(href));
+
+            return (
+              <Link
+                key={item.href}
+                href={href}
+                className="flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors"
+              >
+                <div
+                  className={cn(
+                    "flex items-center justify-center w-10 h-7 rounded-2xl transition-all",
+                    isActive
+                      ? "bg-primary/12 text-primary"
+                      : "text-muted-foreground"
+                  )}
+                >
+                  <Icon
+                    className="h-5 w-5"
+                    strokeWidth={isActive ? 2.5 : 1.8}
+                  />
+                </div>
+                <span
+                  className={cn(
+                    "text-[10px] leading-none",
+                    isActive
+                      ? "font-semibold text-primary"
+                      : "text-muted-foreground"
+                  )}
+                >
+                  {t(item.labelKey as Parameters<typeof t>[0])}
+                </span>
+              </Link>
+            );
+          })}
+
+          {/* More tab — opens sliding menu */}
+          <button
+            onClick={() => setMenuOpen(true)}
+            className="flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors"
+            aria-label={t("more")}
+          >
+            <div
+              className={cn(
+                "flex items-center justify-center w-10 h-7 rounded-2xl transition-all",
+                menuOpen ? "bg-primary/12 text-primary" : "text-muted-foreground"
+              )}
             >
-              {/* Icon with active pill background */}
-              <div
-                className={cn(
-                  "flex items-center justify-center w-10 h-7 rounded-2xl transition-all",
-                  isActive
-                    ? "bg-primary/12 text-primary"
-                    : "text-muted-foreground"
-                )}
-              >
-                <Icon
-                  className="h-5 w-5"
-                  strokeWidth={isActive ? 2.5 : 1.8}
-                />
-              </div>
-              <span
-                className={cn(
-                  "text-[10px] leading-none",
-                  isActive
-                    ? "font-semibold text-primary"
-                    : "text-muted-foreground"
-                )}
-              >
-                {t(item.labelKey as Parameters<typeof t>[0])}
-              </span>
-            </Link>
-          );
-        })}
-      </div>
-    </nav>
+              <MoreHorizontal className="h-5 w-5" strokeWidth={menuOpen ? 2.5 : 1.8} />
+            </div>
+            <span
+              className={cn(
+                "text-[10px] leading-none",
+                menuOpen ? "font-semibold text-primary" : "text-muted-foreground"
+              )}
+            >
+              {t("more")}
+            </span>
+          </button>
+        </div>
+      </nav>
+    </>
   );
 }

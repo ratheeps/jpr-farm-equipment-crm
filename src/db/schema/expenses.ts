@@ -27,6 +27,8 @@ export const expenses = pgTable("expenses", {
   amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
   description: text("description"),
   receiptImageUrl: varchar("receipt_image_url", { length: 500 }),
+  gpsLat: numeric("gps_lat", { precision: 10, scale: 7 }),
+  gpsLng: numeric("gps_lng", { precision: 10, scale: 7 }),
   date: date("date").notNull(),
   syncStatus: syncStatusEnum("sync_status").notNull().default("synced"),
   clientDeviceId: text("client_device_id"),

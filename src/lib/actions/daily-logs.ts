@@ -1,9 +1,9 @@
 "use server";
 
 import { db } from "@/db";
-import { dailyLogs, staffProfiles, vehicles, projects } from "@/db/schema";
+import { dailyLogs, staffProfiles, vehicles, projects, projectAssignments, vehicleAssignments } from "@/db/schema";
 import { requireSession } from "@/lib/auth/session";
-import { eq, and, desc, isNotNull } from "drizzle-orm";
+import { eq, and, desc, isNotNull, isNull, or, lte, gte } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { validateStartLog, validateEndLog } from "@/lib/validations";
 
@@ -21,6 +21,8 @@ export async function getTodayLog() {
   if (!profile) return null;
 
   const today = new Date().toISOString().split("T")[0];
+
+  // Only return the active (not yet ended) log
   const [log] = await db
     .select({
       id: dailyLogs.id,
@@ -45,10 +47,44 @@ export async function getTodayLog() {
     .from(dailyLogs)
     .innerJoin(vehicles, eq(dailyLogs.vehicleId, vehicles.id))
     .where(
-      and(eq(dailyLogs.operatorId, profile.id), eq(dailyLogs.date, today))
-    );
+      and(
+        eq(dailyLogs.operatorId, profile.id),
+        eq(dailyLogs.date, today),
+        isNull(dailyLogs.endTime)
+      )
+    )
+    .limit(1);
 
   return log ?? null;
+}
+
+/** All completed work sessions for today — shown as a summary list below the active log form */
+export async function getTodayCompletedLogs() {
+  const session = await requireSession();
+  const profile = await getStaffProfile(session.userId);
+  if (!profile) return [];
+
+  const today = new Date().toISOString().split("T")[0];
+
+  return db
+    .select({
+      id: dailyLogs.id,
+      startEngineHours: dailyLogs.startEngineHours,
+      endEngineHours: dailyLogs.endEngineHours,
+      startTime: dailyLogs.startTime,
+      endTime: dailyLogs.endTime,
+      vehicleName: vehicles.name,
+    })
+    .from(dailyLogs)
+    .innerJoin(vehicles, eq(dailyLogs.vehicleId, vehicles.id))
+    .where(
+      and(
+        eq(dailyLogs.operatorId, profile.id),
+        eq(dailyLogs.date, today),
+        isNotNull(dailyLogs.endTime)
+      )
+    )
+    .orderBy(desc(dailyLogs.startTime));
 }
 
 export async function startLog(data: {
@@ -66,14 +102,18 @@ export async function startLog(data: {
 
   const today = new Date().toISOString().split("T")[0];
 
-  // Check no log for today already
+  // Block only if an active (un-ended) log already exists
   const [existing] = await db
     .select({ id: dailyLogs.id })
     .from(dailyLogs)
     .where(
-      and(eq(dailyLogs.operatorId, profile.id), eq(dailyLogs.date, today))
+      and(
+        eq(dailyLogs.operatorId, profile.id),
+        eq(dailyLogs.date, today),
+        isNull(dailyLogs.endTime)
+      )
     );
-  if (existing) throw new Error("A log already exists for today");
+  if (existing) throw new Error("An active log already exists. End it before starting a new one.");
 
   const [log] = await db
     .insert(dailyLogs)
@@ -227,6 +267,76 @@ export async function getActiveProjects() {
     .from(projects)
     .where(eq(projects.status, "active"))
     .orderBy(projects.clientName);
+}
+
+/** Returns only active projects assigned to the currently logged-in operator (directly or via vehicle date range) */
+export async function getMyAssignedProjects() {
+  const session = await requireSession();
+
+  const [profile] = await db
+    .select({ id: staffProfiles.id })
+    .from(staffProfiles)
+    .where(eq(staffProfiles.userId, session.userId));
+
+  if (!profile) return [];
+
+  const today = new Date().toISOString().split("T")[0];
+
+  // Get vehicle IDs currently assigned to this operator
+  const myVehicleRows = await db
+    .select({ vehicleId: vehicleAssignments.vehicleId })
+    .from(vehicleAssignments)
+    .where(
+      and(
+        eq(vehicleAssignments.staffId, profile.id),
+        eq(vehicleAssignments.isActive, true)
+      )
+    );
+  const vehicleIds = myVehicleRows
+    .map((r) => r.vehicleId)
+    .filter((id): id is string => id !== null);
+
+  // Build vehicle-based project conditions
+  const vehicleConditions = vehicleIds.map((vid) =>
+    and(
+      eq(projectAssignments.vehicleId, vid),
+      eq(projectAssignments.isActive, true),
+      or(isNull(projectAssignments.assignedFrom), lte(projectAssignments.assignedFrom, today)),
+      or(isNull(projectAssignments.assignedTo), gte(projectAssignments.assignedTo, today))
+    )
+  );
+
+  const rows = await db
+    .select({
+      id: projects.id,
+      clientName: projects.clientName,
+      siteLocation: projects.siteLocationText,
+    })
+    .from(projectAssignments)
+    .innerJoin(projects, eq(projectAssignments.projectId, projects.id))
+    .where(
+      and(
+        eq(projects.status, "active"),
+        or(
+          // Directly assigned to this operator
+          and(
+            eq(projectAssignments.staffId, profile.id),
+            eq(projectAssignments.isActive, true)
+          ),
+          // Project assigned to one of operator's vehicles within active date range
+          ...(vehicleConditions.length > 0 ? vehicleConditions : [])
+        )
+      )
+    )
+    .orderBy(projects.clientName);
+
+  // Deduplicate — same project can match both staff and vehicle assignment
+  const seen = new Set<string>();
+  return rows.filter((r) => {
+    if (seen.has(r.id)) return false;
+    seen.add(r.id);
+    return true;
+  });
 }
 
 /**

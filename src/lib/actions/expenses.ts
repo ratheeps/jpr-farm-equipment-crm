@@ -24,10 +24,21 @@ export async function createExpense(data: {
   description?: string;
   date: string;
   receiptImageUrl?: string;
+  gpsLat?: string;
+  gpsLng?: string;
 }) {
   const session = await requireSession();
   const profile = await getStaffProfile(session.userId);
   if (!profile) throw new Error("No staff profile");
+
+  // Misc category requires description
+  if (data.category === "misc" && !data.description?.trim()) {
+    throw new Error("Description is required for Miscellaneous expenses");
+  }
+  // No vehicle and no project requires description
+  if (!data.vehicleId && !data.projectId && !data.description?.trim()) {
+    throw new Error("Description is required when no vehicle or project is selected");
+  }
 
   const validated = validateExpense(data);
 
@@ -42,6 +53,8 @@ export async function createExpense(data: {
     description: validated.description ?? null,
     date: validated.date,
     receiptImageUrl: data.receiptImageUrl ?? null,
+    gpsLat: data.gpsLat ?? null,
+    gpsLng: data.gpsLng ?? null,
   });
 
   revalidatePath("/operator/expenses");

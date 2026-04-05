@@ -15,3 +15,5 @@ export * from "./farms";
 export * from "./push-subscriptions";
 export * from "./audit-logs";
 export * from "./company-settings";
+export * from "./leaves";
+export * from "./payroll";

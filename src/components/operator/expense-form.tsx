@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useRef } from "react";
+import { useState, useTransition, useRef, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { Camera, PlusCircle, X } from "lucide-react";
 import { createExpense } from "@/lib/actions/expenses";
@@ -21,8 +21,16 @@ interface Vehicle {
   name: string;
 }
 
+interface Project {
+  id: string;
+  clientName: string;
+}
+
 interface Props {
   vehicles: Vehicle[];
+  projects: Project[];
+  defaultProjectId?: string | null;
+  defaultVehicleId?: string | null;
   onAdded?: () => void;
 }
 
@@ -30,7 +38,7 @@ function generateDeviceId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
-export function ExpenseForm({ vehicles, onAdded }: Props) {
+export function ExpenseForm({ vehicles, projects, defaultProjectId, defaultVehicleId, onAdded }: Props) {
   const t = useTranslations("operator");
   const tc = useTranslations("common");
   const tCat = useTranslations("expenses.categories");
@@ -40,8 +48,24 @@ export function ExpenseForm({ vehicles, onAdded }: Props) {
   const [category, setCategory] = useState("fuel");
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
-  const [vehicleId, setVehicleId] = useState(vehicles[0]?.id ?? "");
+  const [vehicleId, setVehicleId] = useState(defaultVehicleId ?? vehicles[0]?.id ?? "");
+  const [projectId, setProjectId] = useState(defaultProjectId ?? "");
   const today = new Date().toISOString().split("T")[0];
+
+  // Silently capture GPS on mount — sent with expense, not shown to operator
+  const [gpsCoords, setGpsCoords] = useState<{ lat: string; lng: string } | null>(null);
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) =>
+        setGpsCoords({
+          lat: pos.coords.latitude.toFixed(7),
+          lng: pos.coords.longitude.toFixed(7),
+        }),
+      () => {},
+      { timeout: 8000, maximumAge: 60000 }
+    );
+  }, []);
 
   // Receipt photo state
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -86,6 +110,9 @@ export function ExpenseForm({ vehicles, onAdded }: Props) {
 
   function handleSubmit() {
     if (!amount || !category) return;
+    const descriptionRequired = !vehicleId && !projectId;
+    if (category === "misc" && !description.trim()) return;
+    if (descriptionRequired && !description.trim()) return;
 
     startTransition(async () => {
       const isOnline = navigator.onLine;
@@ -98,21 +125,25 @@ export function ExpenseForm({ vehicles, onAdded }: Props) {
         }
         await createExpense({
           vehicleId: vehicleId || undefined,
+          projectId: projectId || undefined,
           category,
           amount,
           description: description || undefined,
           date: today,
           receiptImageUrl: finalReceiptUrl ?? undefined,
+          gpsLat: gpsCoords?.lat,
+          gpsLng: gpsCoords?.lng,
         });
       } else {
         await localDb.offlineExpenses.add({
           deviceId: generateDeviceId(),
           vehicleId: vehicleId || undefined,
+          projectId: projectId || undefined,
           category,
           amount: parseFloat(amount),
           description: description || undefined,
           date: today,
-          receiptImagePath: receiptPreview ?? undefined, // store base64 for offline; uploaded during sync
+          receiptImagePath: receiptPreview ?? undefined,
           syncStatus: "local",
           createdAt: Date.now(),
         });
@@ -120,6 +151,7 @@ export function ExpenseForm({ vehicles, onAdded }: Props) {
 
       setAmount("");
       setDescription("");
+      setProjectId("");
       setReceiptPreview(null);
       setReceiptFile(null);
       setReceiptUrl(null);
@@ -186,6 +218,25 @@ export function ExpenseForm({ vehicles, onAdded }: Props) {
             </div>
           )}
 
+          {/* Project */}
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-1">
+              Project
+            </label>
+            <select
+              value={projectId}
+              onChange={(e) => setProjectId(e.target.value)}
+              className="w-full h-11 rounded-xl border border-input bg-background px-3 text-sm"
+            >
+              <option value="">— Select Project —</option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.clientName}
+                </option>
+              ))}
+            </select>
+          </div>
+
           {/* Amount */}
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">
@@ -205,14 +256,29 @@ export function ExpenseForm({ vehicles, onAdded }: Props) {
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">
               {t("expenseDescription")}
+              {(category === "misc" || (!vehicleId && !projectId)) && (
+                <span className="text-destructive"> *</span>
+              )}
             </label>
             <input
               type="text"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="e.g. Diesel fill-up"
+              placeholder={
+                category === "misc"
+                  ? "Required for Miscellaneous"
+                  : !vehicleId && !projectId
+                  ? "Required when no vehicle or project selected"
+                  : "e.g. Diesel fill-up"
+              }
               className="w-full h-12 rounded-xl border border-input bg-background px-4 text-base focus:outline-none focus:ring-2 focus:ring-primary"
             />
+            {category === "misc" && !description.trim() && (
+              <p className="text-xs text-destructive mt-1">Description is required for Miscellaneous</p>
+            )}
+            {!vehicleId && !projectId && !description.trim() && category !== "misc" && (
+              <p className="text-xs text-destructive mt-1">Description is required when no vehicle or project is selected</p>
+            )}
           </div>
 
           {/* Receipt photo */}
@@ -263,10 +329,10 @@ export function ExpenseForm({ vehicles, onAdded }: Props) {
             </button>
             <button
               onClick={handleSubmit}
-              disabled={!amount || isPending}
+              disabled={!amount || isPending || (category === "misc" && !description.trim()) || (!vehicleId && !projectId && !description.trim())}
               className={cn(
                 "flex-1 h-12 rounded-xl text-sm font-bold transition-colors",
-                amount && !isPending
+                amount && !isPending && !(category === "misc" && !description.trim()) && !(!vehicleId && !projectId && !description.trim())
                   ? "bg-primary text-primary-foreground"
                   : "bg-muted text-muted-foreground cursor-not-allowed"
               )}

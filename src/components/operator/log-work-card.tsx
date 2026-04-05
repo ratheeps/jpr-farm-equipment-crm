@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useEffect } from "react";
 import { useTranslations } from "next-intl";
-import { MapPin, CheckCircle2, Clock, Fuel, Gauge, TreePine } from "lucide-react";
+import { CheckCircle2, Clock, Fuel, Gauge, TreePine } from "lucide-react";
 import { startLog, endLog, getLastEndEngineHours } from "@/lib/actions/daily-logs";
 import { localDb } from "@/lib/offline/db";
 import { cn } from "@/lib/utils";
@@ -38,10 +38,21 @@ interface ActiveLog {
   gpsLngStart: string | null;
 }
 
+interface CompletedLog {
+  id: string;
+  startEngineHours: string;
+  endEngineHours: string | null;
+  startTime: Date | null;
+  endTime: Date | null;
+  vehicleName: string;
+}
+
 interface Props {
   todayLog: ActiveLog | null;
   vehicles: Vehicle[];
   projects: Project[];
+  assignedVehicleId?: string | null;
+  completedLogs?: CompletedLog[];
 }
 
 function generateDeviceId() {
@@ -66,16 +77,17 @@ async function captureGps(): Promise<{ lat: string; lng: string } | null> {
   });
 }
 
-export function LogWorkCard({ todayLog, vehicles, projects }: Props) {
+export function LogWorkCard({ todayLog, vehicles, projects, assignedVehicleId, completedLogs = [] }: Props) {
   const t = useTranslations("operator");
   const tc = useTranslations("common");
   const [isPending, startTransition] = useTransition();
 
-  // Start form state
-  const [vehicleId, setVehicleId] = useState(vehicles[0]?.id ?? "");
+  // Start form state — prefer assigned vehicle, then first vehicle
+  const defaultVehicleId = assignedVehicleId ?? vehicles[0]?.id ?? "";
+  const [vehicleId, setVehicleId] = useState(defaultVehicleId);
   const [projectId, setProjectId] = useState("");
   const [startHours, setStartHours] = useState("");
-  const [gpsStatus, setGpsStatus] = useState<"idle" | "capturing" | "ok" | "denied">("idle");
+  // GPS captured silently on mount
   const [gpsCoords, setGpsCoords] = useState<{ lat: string; lng: string } | null>(null);
   const [startError, setStartError] = useState("");
 
@@ -90,6 +102,13 @@ export function LogWorkCard({ todayLog, vehicles, projects }: Props) {
   // Active log (may update after start)
   const [activeLog, setActiveLog] = useState<ActiveLog | null>(todayLog);
 
+  // Capture GPS silently on mount — used for start/end logs without showing to operator
+  useEffect(() => {
+    captureGps().then((coords) => {
+      if (coords) setGpsCoords(coords);
+    });
+  }, []);
+
   // Prefill start engine hours from previous log's end hours, falling back to vehicle's current hours
   useEffect(() => {
     if (!activeLog && vehicleId) {
@@ -103,17 +122,6 @@ export function LogWorkCard({ todayLog, vehicles, projects }: Props) {
       });
     }
   }, [vehicleId, vehicles, activeLog]);
-
-  async function handleGpsCapture() {
-    setGpsStatus("capturing");
-    const coords = await captureGps();
-    if (coords) {
-      setGpsCoords(coords);
-      setGpsStatus("ok");
-    } else {
-      setGpsStatus("denied");
-    }
-  }
 
   function handleStartWork() {
     if (!vehicleId || !startHours) return;
@@ -225,7 +233,7 @@ export function LogWorkCard({ todayLog, vehicles, projects }: Props) {
     });
   }
 
-  // Completed log view
+  // Completed log view — allow starting a new session
   if (activeLog?.endEngineHours) {
     const startH = parseFloat(activeLog.startEngineHours);
     const endH = parseFloat(activeLog.endEngineHours);
@@ -245,6 +253,17 @@ export function LogWorkCard({ todayLog, vehicles, projects }: Props) {
             <span className="col-span-2 font-medium text-foreground">{t("hoursWorked")}: {worked} hrs</span>
           </div>
         </div>
+
+        {/* Start another work session */}
+        <button
+          onClick={() => setActiveLog(null)}
+          className="w-full h-14 rounded-2xl bg-primary text-primary-foreground text-base font-bold active:scale-95 transition-transform"
+        >
+          {t("startWork")} (New Session)
+        </button>
+
+        {/* All completed sessions today */}
+        {completedLogs.length > 0 && <CompletedLogsList logs={completedLogs} t={t} />}
       </div>
     );
   }
@@ -269,12 +288,6 @@ export function LogWorkCard({ todayLog, vehicles, projects }: Props) {
           <p className="text-sm text-muted-foreground">
             {t("startHours")}: {activeLog.startEngineHours}
           </p>
-          {activeLog.gpsLatStart && (
-            <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-              <MapPin className="h-3 w-3" />
-              {activeLog.gpsLatStart}, {activeLog.gpsLngStart}
-            </p>
-          )}
         </div>
 
         {/* End work form */}
@@ -386,6 +399,7 @@ export function LogWorkCard({ todayLog, vehicles, projects }: Props) {
           {vehicles.map((v) => (
             <option key={v.id} value={v.id}>
               {v.name} {v.registrationNumber ? `(${v.registrationNumber})` : ""}
+              {v.id === assignedVehicleId ? " ★" : ""}
             </option>
           ))}
         </select>
@@ -426,22 +440,6 @@ export function LogWorkCard({ todayLog, vehicles, projects }: Props) {
         />
       </div>
 
-      {/* GPS capture */}
-      <button
-        type="button"
-        onClick={handleGpsCapture}
-        className="flex items-center gap-2 text-sm text-primary font-medium"
-      >
-        <MapPin className="h-4 w-4" />
-        {gpsStatus === "capturing"
-          ? t("gpsCapturing")
-          : gpsStatus === "ok"
-          ? `GPS: ${gpsCoords?.lat}, ${gpsCoords?.lng}`
-          : gpsStatus === "denied"
-          ? "GPS unavailable"
-          : "Capture location"}
-      </button>
-
       {startError && <p className="text-sm text-destructive">{startError}</p>}
 
       <button
@@ -456,6 +454,67 @@ export function LogWorkCard({ todayLog, vehicles, projects }: Props) {
       >
         {isPending ? "..." : t("startWork")}
       </button>
+
+      {/* Show today's completed sessions even when no active log */}
+      {completedLogs.length > 0 && <CompletedLogsList logs={completedLogs} t={t} />}
+    </div>
+  );
+}
+
+/** Small helper to list today's completed work sessions */
+function formatTime(d: Date | null): string {
+  if (!d) return "—";
+  // Use the ISO string to format HH:MM — consistent between server and client
+  const iso = new Date(d).toISOString();
+  const [, time] = iso.split("T");
+  const [h, m] = time.split(":");
+  const hour = parseInt(h, 10);
+  const ampm = hour >= 12 ? "PM" : "AM";
+  const h12 = hour % 12 === 0 ? 12 : hour % 12;
+  return `${h12}:${m} ${ampm}`;
+}
+
+function CompletedLogsList({
+  logs,
+  t,
+}: {
+  logs: CompletedLog[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  t: any;
+}) {
+  return (
+    <div className="space-y-2 pt-2 border-t border-border/60">
+      <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+        Today&apos;s Sessions
+      </p>
+      {logs.map((log, i) => {
+        const worked =
+          log.startEngineHours && log.endEngineHours
+            ? (parseFloat(log.endEngineHours) - parseFloat(log.startEngineHours)).toFixed(1)
+            : null;
+        const startStr = formatTime(log.startTime);
+        const endStr = formatTime(log.endTime);
+        return (
+          <div
+            key={log.id}
+            className="rounded-xl bg-muted/60 px-3 py-2 flex items-center justify-between gap-3"
+          >
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-foreground truncate">
+                {i + 1}. {log.vehicleName}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {startStr} → {endStr}
+              </p>
+            </div>
+            {worked && (
+              <span className="shrink-0 text-sm font-semibold text-foreground">
+                {worked} hrs
+              </span>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }

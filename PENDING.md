@@ -239,15 +239,24 @@ Nice-to-haves that improve the overall experience.
 
 **Details:** No database backup automation or documentation. Critical for production data safety.
 
-### 44. Staff Leave / Attendance Tracking
+### 44. Staff Leave / Attendance Tracking ✅
 
 **Req. Reference:** "temporary assignment capability, allowing the administrator to reallocate an operator in the event of staff leave or machine breakdown"  
-**Details:** Project assignments exist, but no leave/absence tracking or schedule management UI.
+**Status:** Implemented — `staff_leaves` + `staff_schedules` DB tables (migration 0006). Admin leave management at `/admin/staff/leaves`. Operator self-service at `/operator/leave`. Week-based schedule grid at `/admin/staff/schedule`. Approve/reject leave actions. `getStaffAvailability()` for scheduling context.
 
-### 45. Operator Pay Calculation / Payroll
+### 45. Operator Pay Calculation / Payroll ✅
 
 **Req. Reference:** "harvesting machine operators receive a dual-rate structure comprising a base salary and a per-acre performance bonus"  
-**Details:** `payRate` and `payType` fields exist on staff profiles. But no automated payroll calculation aggregating daily logs into pay periods.
+**Status:** Implemented — `payroll_periods` DB table. `generatePayroll()` aggregates daily logs per period, calculates basePay + performanceBonus by payType (hourly/per_acre/per_km/per_task), deducts approved leave days. Admin payroll management at `/admin/staff/payroll`. Owner performance dashboard at `/owner/staff-performance` with idle ratio metrics.
+
+### 46. Vehicle-Operator Default Assignment ✅
+
+**Req. Reference:** Operators should have a designated vehicle pre-filled in their work log.  
+**Status:** Implemented — `vehicle_assignments` DB table (migration 0006). Admin assigns operators to vehicles at vehicle detail page. Operator's log form pre-selects their assigned vehicle (marked with ★). `getMyVehicleAssignment()` action.
+
+### 47. Enriched Staff Profile Page ✅
+
+**Status:** Implemented — Staff detail page now shows: role badge, month stats (logs/hours/fuel/acres/km), vehicle assignments, project assignments, recent activity, paginated work history at `/admin/staff/[id]`.
 
 ### 46. Weather Data Integration
 
