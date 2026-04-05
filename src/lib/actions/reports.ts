@@ -8,9 +8,15 @@ import {
   maintenanceRecords,
   expenses,
   staffProfiles,
+  projects,
+  invoices,
+  paddyFarms,
+  farmCycles,
+  farmInputs,
+  farmHarvests,
 } from "@/db/schema";
 import { requireSession, isRole } from "@/lib/auth/session";
-import { eq, isNotNull, sql } from "drizzle-orm";
+import { eq, isNotNull, sql, not, and } from "drizzle-orm";
 
 // ─── Fuel Efficiency Report ──────────────────────────────────────────────────
 
@@ -271,4 +277,468 @@ export async function exportMaintenanceData(): Promise<MaintenanceExportRow[]> {
     cost: r.cost !== null ? Number(r.cost) : null,
     performedBy: r.performedBy ?? "",
   }));
+}
+
+// ─── Idling Report ────────────────────────────────────────────────────────────
+
+export type IdlingRow = {
+  vehicleId: string;
+  vehicleName: string;
+  vehicleType: string;
+  totalEngineHours: number;
+  nonProductiveEngineHours: number;
+  idleRatioPct: number;
+  baselineLPerHr: number | null;
+  estimatedIdleFuelLiters: number | null;
+};
+
+export async function getIdlingReport(): Promise<IdlingRow[]> {
+  const session = await requireSession();
+  if (!isRole(session, "super_admin", "admin", "auditor")) {
+    throw new Error("Forbidden");
+  }
+
+  const rows = await db
+    .select({
+      vehicleId: vehicles.id,
+      vehicleName: vehicles.name,
+      vehicleType: vehicles.vehicleType,
+      baselineLPerHr: vehicles.fuelConsumptionBaseline,
+      totalEngineHours: sql<string>`COALESCE(SUM(CASE WHEN ${dailyLogs.endEngineHours} IS NOT NULL THEN (${dailyLogs.endEngineHours} - ${dailyLogs.startEngineHours}) ELSE 0 END), 0)`,
+      productiveEngineHours: sql<string>`COALESCE(SUM(CASE WHEN ${dailyLogs.endEngineHours} IS NOT NULL AND (${dailyLogs.acresWorked} > 0 OR ${dailyLogs.kmTraveled} > 0) THEN (${dailyLogs.endEngineHours} - ${dailyLogs.startEngineHours}) ELSE 0 END), 0)`,
+    })
+    .from(vehicles)
+    .leftJoin(dailyLogs, eq(dailyLogs.vehicleId, vehicles.id))
+    .groupBy(
+      vehicles.id,
+      vehicles.name,
+      vehicles.vehicleType,
+      vehicles.fuelConsumptionBaseline
+    )
+    .orderBy(vehicles.name);
+
+  return rows
+    .map((r) => {
+      const total = Number(r.totalEngineHours);
+      const productive = Number(r.productiveEngineHours);
+      const idle = Math.max(0, total - productive);
+      const idleRatioPct = total > 0 ? Math.round((idle / total) * 1000) / 10 : 0;
+      const baseline = r.baselineLPerHr ? Number(r.baselineLPerHr) : null;
+      return {
+        vehicleId: r.vehicleId,
+        vehicleName: r.vehicleName,
+        vehicleType: r.vehicleType,
+        totalEngineHours: Math.round(total * 10) / 10,
+        nonProductiveEngineHours: Math.round(idle * 10) / 10,
+        idleRatioPct,
+        baselineLPerHr: baseline,
+        estimatedIdleFuelLiters:
+          baseline !== null ? Math.round(idle * baseline * 10) / 10 : null,
+      };
+    })
+    .filter((r) => r.totalEngineHours > 0);
+}
+
+// ─── Fuel Discrepancy Report ──────────────────────────────────────────────────
+
+export type FuelDiscrepancyRow = {
+  vehicleId: string;
+  vehicleName: string;
+  vehicleType: string;
+  baselineLPerHr: number | null;
+  totalEngineHours: number;
+  expectedFuelLiters: number | null;
+  actualFuelLogged: number;
+  discrepancyLiters: number | null;
+  discrepancyPct: number | null;
+  flagged: boolean;
+};
+
+export async function getFuelDiscrepancyReport(): Promise<FuelDiscrepancyRow[]> {
+  const session = await requireSession();
+  if (!isRole(session, "super_admin", "admin", "auditor")) {
+    throw new Error("Forbidden");
+  }
+
+  const rows = await db
+    .select({
+      vehicleId: vehicles.id,
+      vehicleName: vehicles.name,
+      vehicleType: vehicles.vehicleType,
+      baselineLPerHr: vehicles.fuelConsumptionBaseline,
+      totalEngineHours: sql<string>`COALESCE(SUM(CASE WHEN ${dailyLogs.endEngineHours} IS NOT NULL THEN (${dailyLogs.endEngineHours} - ${dailyLogs.startEngineHours}) ELSE 0 END), 0)`,
+      actualFuelLogged: sql<string>`COALESCE(SUM(${dailyLogs.fuelUsedLiters}), 0)`,
+    })
+    .from(vehicles)
+    .leftJoin(dailyLogs, and(eq(dailyLogs.vehicleId, vehicles.id), isNotNull(dailyLogs.endEngineHours)))
+    .groupBy(
+      vehicles.id,
+      vehicles.name,
+      vehicles.vehicleType,
+      vehicles.fuelConsumptionBaseline
+    )
+    .orderBy(vehicles.name);
+
+  return rows
+    .map((r) => {
+      const hours = Number(r.totalEngineHours);
+      const actualFuel = Number(r.actualFuelLogged);
+      const baseline = r.baselineLPerHr ? Number(r.baselineLPerHr) : null;
+      const expectedFuel =
+        baseline !== null && hours > 0
+          ? Math.round(hours * baseline * 10) / 10
+          : null;
+      const discrepancyLiters =
+        expectedFuel !== null
+          ? Math.round((actualFuel - expectedFuel) * 10) / 10
+          : null;
+      const discrepancyPct =
+        expectedFuel !== null && expectedFuel > 0
+          ? Math.round(((actualFuel - expectedFuel) / expectedFuel) * 1000) / 10
+          : null;
+      return {
+        vehicleId: r.vehicleId,
+        vehicleName: r.vehicleName,
+        vehicleType: r.vehicleType,
+        baselineLPerHr: baseline,
+        totalEngineHours: Math.round(hours * 10) / 10,
+        expectedFuelLiters: expectedFuel,
+        actualFuelLogged: Math.round(actualFuel * 10) / 10,
+        discrepancyLiters,
+        discrepancyPct,
+        flagged: discrepancyPct !== null && Math.abs(discrepancyPct) > 20,
+      };
+    })
+    .filter((r) => r.totalEngineHours > 0);
+}
+
+// ─── Project Margin Report ────────────────────────────────────────────────────
+
+export type ProjectMarginRow = {
+  projectId: string;
+  projectName: string;
+  clientName: string;
+  status: string;
+  revenue: number;
+  fuelCost: number;
+  partsCost: number;
+  laborCost: number;
+  otherCost: number;
+  totalCost: number;
+  margin: number;
+  marginPct: number | null;
+};
+
+export async function getProjectMarginReport(): Promise<ProjectMarginRow[]> {
+  const session = await requireSession();
+  if (!isRole(session, "super_admin", "admin", "auditor")) {
+    throw new Error("Forbidden");
+  }
+
+  const [allProjects, invoiceRevenue, projectExpenses] = await Promise.all([
+    db
+      .select({ id: projects.id, name: projects.name, clientName: projects.clientName, status: projects.status })
+      .from(projects)
+      .where(not(eq(projects.status, "planned")))
+      .orderBy(projects.createdAt),
+
+    db
+      .select({
+        projectId: invoices.projectId,
+        total: sql<string>`SUM(${invoices.total})`,
+      })
+      .from(invoices)
+      .where(and(isNotNull(invoices.projectId), not(eq(invoices.status, "cancelled"))))
+      .groupBy(invoices.projectId),
+
+    db
+      .select({
+        projectId: expenses.projectId,
+        category: expenses.category,
+        total: sql<string>`SUM(${expenses.amount})`,
+      })
+      .from(expenses)
+      .where(isNotNull(expenses.projectId))
+      .groupBy(expenses.projectId, expenses.category),
+  ]);
+
+  return allProjects.map((p) => {
+    const revenue = Number(invoiceRevenue.find((r) => r.projectId === p.id)?.total ?? 0);
+    const expRows = projectExpenses.filter((e) => e.projectId === p.id);
+    const fuelCost = expRows.filter((e) => e.category === "fuel").reduce((s, e) => s + Number(e.total), 0);
+    const partsCost = expRows.filter((e) => e.category === "parts" || e.category === "repair").reduce((s, e) => s + Number(e.total), 0);
+    const laborCost = expRows.filter((e) => e.category === "labor").reduce((s, e) => s + Number(e.total), 0);
+    const otherCost = expRows.filter((e) => !["fuel", "parts", "repair", "labor"].includes(e.category)).reduce((s, e) => s + Number(e.total), 0);
+    const totalCost = fuelCost + partsCost + laborCost + otherCost;
+    const margin = revenue - totalCost;
+    const marginPct = revenue > 0 ? Math.round((margin / revenue) * 1000) / 10 : null;
+    return {
+      projectId: p.id,
+      projectName: p.name,
+      clientName: p.clientName,
+      status: p.status,
+      revenue: Math.round(revenue * 100) / 100,
+      fuelCost: Math.round(fuelCost * 100) / 100,
+      partsCost: Math.round(partsCost * 100) / 100,
+      laborCost: Math.round(laborCost * 100) / 100,
+      otherCost: Math.round(otherCost * 100) / 100,
+      totalCost: Math.round(totalCost * 100) / 100,
+      margin: Math.round(margin * 100) / 100,
+      marginPct,
+    };
+  });
+}
+
+// ─── Fleet Positions (for Owner Dashboard map) ───────────────────────────────
+
+export type FleetPositionRow = {
+  vehicleId: string;
+  vehicleName: string;
+  vehicleType: string;
+  vehicleStatus: string;
+  lat: number;
+  lng: number;
+  lastLogDate: string;
+  operatorName: string;
+};
+
+export async function getFleetPositions(): Promise<FleetPositionRow[]> {
+  const session = await requireSession();
+  if (!isRole(session, "super_admin", "admin")) {
+    throw new Error("Forbidden");
+  }
+
+  // Fetch all logs that have GPS data, ordered newest first
+  const logs = await db
+    .select({
+      vehicleId: dailyLogs.vehicleId,
+      vehicleName: vehicles.name,
+      vehicleType: vehicles.vehicleType,
+      vehicleStatus: vehicles.status,
+      lat: dailyLogs.gpsLatEnd,
+      lng: dailyLogs.gpsLngEnd,
+      latStart: dailyLogs.gpsLatStart,
+      lngStart: dailyLogs.gpsLngStart,
+      date: dailyLogs.date,
+      operatorName: staffProfiles.fullName,
+    })
+    .from(dailyLogs)
+    .innerJoin(vehicles, eq(dailyLogs.vehicleId, vehicles.id))
+    .innerJoin(staffProfiles, eq(dailyLogs.operatorId, staffProfiles.id))
+    .orderBy(sql`${dailyLogs.date} DESC, ${dailyLogs.createdAt} DESC`);
+
+  // Keep only the latest log per vehicle that has a GPS coordinate
+  const seen = new Set<string>();
+  const result: FleetPositionRow[] = [];
+  for (const log of logs) {
+    if (seen.has(log.vehicleId)) continue;
+    const lat = log.lat ?? log.latStart;
+    const lng = log.lng ?? log.lngStart;
+    if (lat && lng) {
+      seen.add(log.vehicleId);
+      result.push({
+        vehicleId: log.vehicleId,
+        vehicleName: log.vehicleName,
+        vehicleType: log.vehicleType,
+        vehicleStatus: log.vehicleStatus,
+        lat: Number(lat),
+        lng: Number(lng),
+        lastLogDate: log.date,
+        operatorName: log.operatorName ?? "",
+      });
+    }
+  }
+  return result;
+}
+
+// ─── Asset Profitability (for Owner Dashboard chart) ─────────────────────────
+
+export type AssetProfitabilityRow = {
+  vehicleId: string;
+  vehicleName: string;
+  vehicleType: string;
+  totalCosts: number;
+  totalEngineHours: number;
+  costPerHour: number | null;
+};
+
+export async function getAssetProfitability(): Promise<AssetProfitabilityRow[]> {
+  const session = await requireSession();
+  if (!isRole(session, "super_admin", "admin")) {
+    throw new Error("Forbidden");
+  }
+
+  const [vehicleList, expenseByVehicle, hoursByVehicle] = await Promise.all([
+    db.select({ id: vehicles.id, name: vehicles.name, type: vehicles.vehicleType }).from(vehicles).orderBy(vehicles.name),
+    db
+      .select({
+        vehicleId: expenses.vehicleId,
+        total: sql<string>`SUM(${expenses.amount})`,
+      })
+      .from(expenses)
+      .where(isNotNull(expenses.vehicleId))
+      .groupBy(expenses.vehicleId),
+    db
+      .select({
+        vehicleId: dailyLogs.vehicleId,
+        hours: sql<string>`COALESCE(SUM(CASE WHEN ${dailyLogs.endEngineHours} IS NOT NULL THEN (${dailyLogs.endEngineHours} - ${dailyLogs.startEngineHours}) ELSE 0 END), 0)`,
+      })
+      .from(dailyLogs)
+      .groupBy(dailyLogs.vehicleId),
+  ]);
+
+  return vehicleList.map((v) => {
+    const totalCosts = Number(expenseByVehicle.find((e) => e.vehicleId === v.id)?.total ?? 0);
+    const totalEngineHours = Number(hoursByVehicle.find((h) => h.vehicleId === v.id)?.hours ?? 0);
+    const costPerHour = totalEngineHours > 0 ? Math.round((totalCosts / totalEngineHours) * 100) / 100 : null;
+    return {
+      vehicleId: v.id,
+      vehicleName: v.name,
+      vehicleType: v.type,
+      totalCosts: Math.round(totalCosts * 100) / 100,
+      totalEngineHours: Math.round(totalEngineHours * 10) / 10,
+      costPerHour,
+    };
+  }).filter((v) => v.totalCosts > 0 || v.totalEngineHours > 0);
+}
+
+// ─── All Farm ROI (for Owner Dashboard chart) ─────────────────────────────────
+
+export type FarmROIRow = {
+  farmId: string;
+  farmName: string;
+  areaAcres: number;
+  totalInputCost: number;
+  totalRevenue: number;
+  profit: number;
+  roiPct: number | null;
+};
+
+export async function getAllFarmROI(): Promise<FarmROIRow[]> {
+  const session = await requireSession();
+  if (!isRole(session, "super_admin", "admin")) {
+    throw new Error("Forbidden");
+  }
+
+  const farms = await db
+    .select({ id: paddyFarms.id, name: paddyFarms.name, areaAcres: paddyFarms.areaAcres })
+    .from(paddyFarms)
+    .where(eq(paddyFarms.isActive, true))
+    .orderBy(paddyFarms.name);
+
+  const cycles = await db
+    .select({ id: farmCycles.id, farmId: farmCycles.farmId })
+    .from(farmCycles);
+
+  const inputs = await db
+    .select({
+      cycleId: farmInputs.cycleId,
+      totalCost: sql<string>`SUM(${farmInputs.totalCost})`,
+    })
+    .from(farmInputs)
+    .groupBy(farmInputs.cycleId);
+
+  const harvests = await db
+    .select({
+      cycleId: farmHarvests.cycleId,
+      totalRevenue: sql<string>`SUM(${farmHarvests.revenue})`,
+    })
+    .from(farmHarvests)
+    .groupBy(farmHarvests.cycleId);
+
+  return farms.map((farm) => {
+    const farmCycleIds = cycles.filter((c) => c.farmId === farm.id).map((c) => c.id);
+    const totalInputCost = inputs
+      .filter((i) => farmCycleIds.includes(i.cycleId))
+      .reduce((s, i) => s + Number(i.totalCost), 0);
+    const totalRevenue = harvests
+      .filter((h) => farmCycleIds.includes(h.cycleId))
+      .reduce((s, h) => s + Number(h.totalRevenue), 0);
+    const profit = totalRevenue - totalInputCost;
+    const roiPct =
+      totalInputCost > 0 ? Math.round((profit / totalInputCost) * 1000) / 10 : null;
+    return {
+      farmId: farm.id,
+      farmName: farm.name,
+      areaAcres: Number(farm.areaAcres),
+      totalInputCost: Math.round(totalInputCost * 100) / 100,
+      totalRevenue: Math.round(totalRevenue * 100) / 100,
+      profit: Math.round(profit * 100) / 100,
+      roiPct,
+    };
+  });
+}
+
+// ─── Expense Alerts (for Owner Dashboard) ─────────────────────────────────────
+
+export type ExpenseAlert = {
+  type: "idling" | "fuel_anomaly" | "maintenance_overdue";
+  severity: "warning" | "critical";
+  vehicleName: string;
+  message: string;
+  value: number;
+};
+
+export async function getExpenseAlerts(): Promise<ExpenseAlert[]> {
+  const session = await requireSession();
+  if (!isRole(session, "super_admin", "admin")) {
+    throw new Error("Forbidden");
+  }
+
+  const [idlingRows, fuelRows, maintenanceRows] = await Promise.all([
+    getIdlingReport(),
+    getFuelDiscrepancyReport(),
+    getMaintenanceStatusReport(),
+  ]);
+
+  const alerts: ExpenseAlert[] = [];
+
+  for (const row of idlingRows) {
+    if (row.idleRatioPct >= 50) {
+      alerts.push({
+        type: "idling",
+        severity: "critical",
+        vehicleName: row.vehicleName,
+        message: `${row.idleRatioPct}% idle ratio — ${row.nonProductiveEngineHours} hrs unproductive`,
+        value: row.idleRatioPct,
+      });
+    } else if (row.idleRatioPct >= 20) {
+      alerts.push({
+        type: "idling",
+        severity: "warning",
+        vehicleName: row.vehicleName,
+        message: `${row.idleRatioPct}% idle ratio — ${row.nonProductiveEngineHours} hrs unproductive`,
+        value: row.idleRatioPct,
+      });
+    }
+  }
+
+  for (const row of fuelRows) {
+    if (!row.flagged) continue;
+    const pct = row.discrepancyPct ?? 0;
+    const positive = pct > 0;
+    alerts.push({
+      type: "fuel_anomaly",
+      severity: Math.abs(pct) >= 50 ? "critical" : "warning",
+      vehicleName: row.vehicleName,
+      message: `Fuel ${positive ? "over" : "under"}-reported by ${Math.abs(pct)}% (${Math.abs(row.discrepancyLiters ?? 0)}L)`,
+      value: pct,
+    });
+  }
+
+  for (const row of maintenanceRows) {
+    alerts.push({
+      type: "maintenance_overdue",
+      severity: "critical",
+      vehicleName: row.vehicleName,
+      message: `${row.overdueCount} overdue service${row.overdueCount > 1 ? "s" : ""}: ${row.overdueTypes.join(", ")}`,
+      value: row.overdueCount,
+    });
+  }
+
+  return alerts.sort((a, b) => {
+    if (a.severity === "critical" && b.severity !== "critical") return -1;
+    if (a.severity !== "critical" && b.severity === "critical") return 1;
+    return 0;
+  });
 }

@@ -6,8 +6,11 @@ import {
   getFuelEfficiencyReport,
   getEngineHoursSummary,
   getMaintenanceStatusReport,
+  getIdlingReport,
+  getFuelDiscrepancyReport,
+  getProjectMarginReport,
 } from "@/lib/actions/reports";
-import { AlertTriangle, CheckCircle } from "lucide-react";
+import { AlertTriangle, CheckCircle, TrendingDown, TrendingUp } from "lucide-react";
 
 export default async function AuditorReportsPage({
   params,
@@ -23,10 +26,13 @@ export default async function AuditorReportsPage({
 
   const t = await getTranslations("reports");
 
-  const [fuelRows, hoursRows, maintenanceRows] = await Promise.all([
+  const [fuelRows, hoursRows, maintenanceRows, idlingRows, discrepancyRows, marginRows] = await Promise.all([
     getFuelEfficiencyReport(),
     getEngineHoursSummary(),
     getMaintenanceStatusReport(),
+    getIdlingReport(),
+    getFuelDiscrepancyReport(),
+    getProjectMarginReport(),
   ]);
 
   function varianceColor(variance: number | null) {
@@ -162,6 +168,111 @@ export default async function AuditorReportsPage({
                         {type.replace("_", " ")}
                       </span>
                     ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Idling Report */}
+        <div>
+          <h2 className="text-base font-semibold text-foreground mb-1">
+            {t("idlingReport")}
+          </h2>
+          <p className="text-xs text-muted-foreground mb-3">{t("idlingDescription")}</p>
+          {idlingRows.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4">{t("noData")}</p>
+          ) : (
+            <div className="bg-card border border-border rounded-xl overflow-hidden">
+              <div className="grid grid-cols-4 gap-1 px-3 py-2 bg-muted/50">
+                <p className="text-[10px] font-medium text-muted-foreground col-span-2">{t("vehicle")}</p>
+                <p className="text-[10px] font-medium text-muted-foreground text-right">{t("idleRatio")}</p>
+                <p className="text-[10px] font-medium text-muted-foreground text-right">{t("idleHours")}</p>
+              </div>
+              {idlingRows.map((row, i) => (
+                <div
+                  key={row.vehicleId}
+                  className={`grid grid-cols-4 gap-1 px-3 py-2.5 ${i < idlingRows.length - 1 ? "border-b border-border" : ""}`}
+                >
+                  <p className="text-sm text-foreground truncate col-span-2">{row.vehicleName}</p>
+                  <p className={`text-sm text-right font-semibold ${row.idleRatioPct >= 50 ? "text-destructive" : row.idleRatioPct >= 20 ? "text-orange-600" : "text-green-600"}`}>
+                    {row.idleRatioPct}%
+                  </p>
+                  <p className="text-sm text-foreground text-right">{row.nonProductiveEngineHours} hrs</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Fuel Discrepancy Report */}
+        <div>
+          <h2 className="text-base font-semibold text-foreground mb-1">
+            {t("fuelDiscrepancy")}
+          </h2>
+          <p className="text-xs text-muted-foreground mb-3">{t("fuelDiscrepancyDescription")}</p>
+          {discrepancyRows.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4">{t("noData")}</p>
+          ) : (
+            <div className="bg-card border border-border rounded-xl overflow-hidden">
+              <div className="grid grid-cols-5 gap-1 px-3 py-2 bg-muted/50">
+                <p className="text-[10px] font-medium text-muted-foreground col-span-2">{t("vehicle")}</p>
+                <p className="text-[10px] font-medium text-muted-foreground text-right">{t("expectedL")}</p>
+                <p className="text-[10px] font-medium text-muted-foreground text-right">{t("actualL")}</p>
+                <p className="text-[10px] font-medium text-muted-foreground text-right">{t("variance")}</p>
+              </div>
+              {discrepancyRows.map((row, i) => (
+                <div
+                  key={row.vehicleId}
+                  className={`grid grid-cols-5 gap-1 px-3 py-2.5 ${row.flagged ? "bg-orange-50" : ""} ${i < discrepancyRows.length - 1 ? "border-b border-border" : ""}`}
+                >
+                  <p className="text-sm text-foreground truncate col-span-2 flex items-center gap-1">
+                    {row.flagged && <AlertTriangle className="h-3 w-3 text-orange-500 flex-shrink-0" />}
+                    {row.vehicleName}
+                  </p>
+                  <p className="text-sm text-foreground text-right">{row.expectedFuelLiters ?? "—"}</p>
+                  <p className="text-sm text-foreground text-right">{row.actualFuelLogged}</p>
+                  <p className={`text-sm text-right font-semibold ${(row.discrepancyPct ?? 0) > 20 ? "text-destructive" : (row.discrepancyPct ?? 0) < -20 ? "text-orange-600" : "text-green-600"}`}>
+                    {row.discrepancyPct !== null ? `${row.discrepancyPct > 0 ? "+" : ""}${row.discrepancyPct}%` : "—"}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Project Margin Report */}
+        <div>
+          <h2 className="text-base font-semibold text-foreground mb-1">
+            {t("projectMargin")}
+          </h2>
+          <p className="text-xs text-muted-foreground mb-3">{t("projectMarginDescription")}</p>
+          {marginRows.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4">{t("noData")}</p>
+          ) : (
+            <div className="space-y-2">
+              {marginRows.map((row) => (
+                <div key={row.projectId} className="bg-card border border-border rounded-xl px-4 py-3">
+                  <div className="flex items-start justify-between mb-1">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-foreground truncate">{row.projectName}</p>
+                      <p className="text-xs text-muted-foreground">{row.clientName}</p>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      {row.margin >= 0
+                        ? <TrendingUp className="h-4 w-4 text-green-600" />
+                        : <TrendingDown className="h-4 w-4 text-destructive" />
+                      }
+                      <span className={`text-sm font-bold ${row.margin >= 0 ? "text-green-600" : "text-destructive"}`}>
+                        {row.marginPct !== null ? `${row.marginPct > 0 ? "+" : ""}${row.marginPct}%` : "—"}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-x-2 text-xs text-muted-foreground mt-2">
+                    <span>Revenue: <span className="font-medium text-foreground">Rs {row.revenue.toLocaleString()}</span></span>
+                    <span>Cost: <span className="font-medium text-foreground">Rs {row.totalCost.toLocaleString()}</span></span>
+                    <span>Margin: <span className={`font-medium ${row.margin >= 0 ? "text-green-600" : "text-destructive"}`}>Rs {row.margin.toLocaleString()}</span></span>
                   </div>
                 </div>
               ))}

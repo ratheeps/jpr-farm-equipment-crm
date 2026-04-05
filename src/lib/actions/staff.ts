@@ -6,6 +6,7 @@ import { requireSession, isRole } from "@/lib/auth/session";
 import { hashPassword } from "@/lib/auth/password";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { validateStaff } from "@/lib/validations";
 
 export type StaffFormData = {
   phone: string;
@@ -24,27 +25,31 @@ export async function createStaff(data: StaffFormData) {
   if (!isRole(session, "super_admin", "admin")) {
     throw new Error("Forbidden");
   }
-  if (!data.password) throw new Error("Password is required");
 
-  const passwordHash = await hashPassword(data.password);
+  const validated = validateStaff(data);
+  if (!validated.password) throw new Error("Password is required");
+  if (validated.password.length < 6)
+    throw new Error("Password must be at least 6 characters");
+
+  const passwordHash = await hashPassword(validated.password);
 
   const [user] = await db
     .insert(users)
     .values({
-      phone: data.phone,
+      phone: validated.phone,
       passwordHash,
-      role: data.role as never,
-      preferredLocale: data.preferredLocale as never,
+      role: validated.role as never,
+      preferredLocale: validated.preferredLocale as never,
     })
     .returning({ id: users.id });
 
   await db.insert(staffProfiles).values({
     userId: user.id,
-    fullName: data.fullName,
-    phone: data.staffPhone || data.phone,
-    nicNumber: data.nicNumber || null,
-    payRate: data.payRate || null,
-    payType: data.payType as never,
+    fullName: validated.fullName,
+    phone: validated.staffPhone ?? validated.phone,
+    nicNumber: validated.nicNumber ?? null,
+    payRate: validated.payRate ?? null,
+    payType: validated.payType as never,
   });
 
   revalidatePath("/admin/staff");

@@ -68,6 +68,24 @@ export async function syncAll(): Promise<void> {
   await Promise.all([syncLogs(), syncExpenses()]);
 }
 
+/**
+ * Registers a Background Sync event with the service worker so that sync
+ * is attempted even if the tab is closed when connectivity is restored.
+ * Falls back gracefully if the Background Sync API is not supported.
+ */
+export async function registerBackgroundSync(): Promise<void> {
+  if (typeof window === "undefined" || !("serviceWorker" in navigator)) return;
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    // Background Sync API is not yet in all TS lib definitions
+    if ("sync" in reg) {
+      await (reg as ServiceWorkerRegistration & { sync: { register(tag: string): Promise<void> } }).sync.register("offline-sync");
+    }
+  } catch {
+    // Not supported or registration failed — the window `online` event fallback handles it
+  }
+}
+
 /** Count of records still waiting to sync */
 export async function pendingSyncCount(): Promise<number> {
   const [logs, expenses] = await Promise.all([

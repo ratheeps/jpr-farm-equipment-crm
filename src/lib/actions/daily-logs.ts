@@ -3,8 +3,9 @@
 import { db } from "@/db";
 import { dailyLogs, staffProfiles, vehicles, projects } from "@/db/schema";
 import { requireSession } from "@/lib/auth/session";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, isNotNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { validateStartLog, validateEndLog } from "@/lib/validations";
 
 async function getStaffProfile(userId: string) {
   const [profile] = await db
@@ -61,6 +62,8 @@ export async function startLog(data: {
   const profile = await getStaffProfile(session.userId);
   if (!profile) throw new Error("No staff profile found");
 
+  const validated = validateStartLog(data);
+
   const today = new Date().toISOString().split("T")[0];
 
   // Check no log for today already
@@ -75,14 +78,14 @@ export async function startLog(data: {
   const [log] = await db
     .insert(dailyLogs)
     .values({
-      vehicleId: data.vehicleId,
+      vehicleId: validated.vehicleId,
       operatorId: profile.id,
-      projectId: data.projectId ?? null,
+      projectId: validated.projectId ?? null,
       date: today,
-      startEngineHours: data.startEngineHours,
+      startEngineHours: validated.startEngineHours,
       startTime: new Date(),
-      gpsLatStart: data.gpsLatStart ?? null,
-      gpsLngStart: data.gpsLngStart ?? null,
+      gpsLatStart: validated.gpsLatStart ?? null,
+      gpsLngStart: validated.gpsLngStart ?? null,
       syncStatus: "synced",
     })
     .returning();
@@ -108,17 +111,35 @@ export async function endLog(
   const profile = await getStaffProfile(session.userId);
   if (!profile) throw new Error("No staff profile found");
 
+  const validated = validateEndLog(data);
+
+  // Fetch the current log to validate end > start engine hours
+  const [currentLog] = await db
+    .select({ startEngineHours: dailyLogs.startEngineHours })
+    .from(dailyLogs)
+    .where(and(eq(dailyLogs.id, logId), eq(dailyLogs.operatorId, profile.id)));
+
+  if (
+    currentLog?.startEngineHours !== null &&
+    currentLog?.startEngineHours !== undefined &&
+    Number(validated.endEngineHours) < Number(currentLog.startEngineHours)
+  ) {
+    throw new Error(
+      "End engine hours cannot be less than start engine hours"
+    );
+  }
+
   await db
     .update(dailyLogs)
     .set({
-      endEngineHours: data.endEngineHours,
+      endEngineHours: validated.endEngineHours,
       endTime: new Date(),
-      fuelUsedLiters: data.fuelUsedLiters || null,
-      kmTraveled: data.kmTraveled || null,
-      acresWorked: data.acresWorked || null,
-      gpsLatEnd: data.gpsLatEnd || null,
-      gpsLngEnd: data.gpsLngEnd || null,
-      notes: data.notes || null,
+      fuelUsedLiters: validated.fuelUsedLiters ?? null,
+      kmTraveled: validated.kmTraveled ?? null,
+      acresWorked: validated.acresWorked ?? null,
+      gpsLatEnd: validated.gpsLatEnd ?? null,
+      gpsLngEnd: validated.gpsLngEnd ?? null,
+      notes: validated.notes ?? null,
       updatedAt: new Date(),
     })
     .where(
@@ -183,4 +204,19 @@ export async function getActiveProjects() {
     .from(projects)
     .where(eq(projects.status, "active"))
     .orderBy(projects.clientName);
+}
+
+/**
+ * Returns the ending engine hours from the most recent completed log for a vehicle.
+ * Used to pre-fill the start engine hours when an operator begins a new shift.
+ */
+export async function getLastEndEngineHours(vehicleId: string): Promise<string | null> {
+  await requireSession();
+  const [row] = await db
+    .select({ endEngineHours: dailyLogs.endEngineHours })
+    .from(dailyLogs)
+    .where(and(eq(dailyLogs.vehicleId, vehicleId), isNotNull(dailyLogs.endEngineHours)))
+    .orderBy(desc(dailyLogs.date), desc(dailyLogs.endTime))
+    .limit(1);
+  return row?.endEngineHours ?? null;
 }

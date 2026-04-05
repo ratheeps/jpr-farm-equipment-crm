@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { WifiOff, Wifi } from "lucide-react";
-import { syncAll, pendingSyncCount } from "@/lib/offline/sync";
+import { syncAll, pendingSyncCount, registerBackgroundSync } from "@/lib/offline/sync";
 
 export function OfflineBanner() {
   const t = useTranslations("operator");
@@ -19,6 +19,9 @@ export function OfflineBanner() {
       const pending = await pendingSyncCount();
       if (pending > 0) {
         setShowRestored(true);
+        // Try Background Sync API first (works even if tab closes mid-sync)
+        await registerBackgroundSync();
+        // Also sync directly as a fast path for browsers that support it
         await syncAll();
         setTimeout(() => setShowRestored(false), 3000);
       }

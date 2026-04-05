@@ -6,8 +6,12 @@ import { eq } from "drizzle-orm";
 import { signToken } from "@/lib/auth/jwt";
 import { COOKIE_NAME } from "@/lib/auth/session";
 import { locales } from "@/i18n/config";
+import { validateCsrf } from "@/lib/csrf";
 
 export async function POST(request: NextRequest) {
+  const csrfError = validateCsrf(request);
+  if (csrfError) return csrfError;
+
   const session = await getSession();
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -34,7 +38,7 @@ export async function POST(request: NextRequest) {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
-    maxAge: 60 * 60 * 24 * 7,
+    maxAge: 60 * 60 * 24, // 24 hours
     path: "/",
   });
 

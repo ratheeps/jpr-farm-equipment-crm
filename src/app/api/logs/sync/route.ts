@@ -4,8 +4,12 @@ import { db } from "@/db";
 import { dailyLogs, staffProfiles } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import type { OfflineLog } from "@/lib/offline/db";
+import { validateCsrf } from "@/lib/csrf";
 
 export async function POST(request: NextRequest) {
+  const csrfError = validateCsrf(request);
+  if (csrfError) return csrfError;
+
   const session = await getSession();
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

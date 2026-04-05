@@ -5,6 +5,7 @@ import { expenses, staffProfiles, vehicles } from "@/db/schema";
 import { requireSession } from "@/lib/auth/session";
 import { eq, and, desc } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { validateExpense } from "@/lib/validations";
 
 async function getStaffProfile(userId: string) {
   const [profile] = await db
@@ -22,21 +23,25 @@ export async function createExpense(data: {
   amount: string;
   description?: string;
   date: string;
+  receiptImageUrl?: string;
 }) {
   const session = await requireSession();
   const profile = await getStaffProfile(session.userId);
   if (!profile) throw new Error("No staff profile");
 
+  const validated = validateExpense(data);
+
   await db.insert(expenses).values({
-    vehicleId: data.vehicleId ?? null,
-    projectId: data.projectId ?? null,
-    dailyLogId: data.dailyLogId ?? null,
+    vehicleId: validated.vehicleId ?? null,
+    projectId: validated.projectId ?? null,
+    dailyLogId: validated.dailyLogId ?? null,
     staffId: profile.id,
     createdBy: session.userId,
-    category: data.category as never,
-    amount: data.amount,
-    description: data.description ?? null,
-    date: data.date,
+    category: validated.category as never,
+    amount: validated.amount,
+    description: validated.description ?? null,
+    date: validated.date,
+    receiptImageUrl: data.receiptImageUrl ?? null,
   });
 
   revalidatePath("/operator/expenses");

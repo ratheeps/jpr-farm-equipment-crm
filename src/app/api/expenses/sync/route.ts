@@ -4,8 +4,12 @@ import { db } from "@/db";
 import { expenses, staffProfiles } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import type { OfflineExpense } from "@/lib/offline/db";
+import { validateCsrf } from "@/lib/csrf";
 
 export async function POST(request: NextRequest) {
+  const csrfError = validateCsrf(request);
+  if (csrfError) return csrfError;
+
   const session = await getSession();
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -43,6 +47,7 @@ export async function POST(request: NextRequest) {
       amount: String(record.amount),
       description: record.description ?? null,
       date: record.date,
+      receiptImageUrl: record.receiptImagePath ?? null,
       createdBy: session.userId,
       clientDeviceId: record.deviceId,
     })

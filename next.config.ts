@@ -14,7 +14,21 @@ const withSerwist = withSerwistInit({
 const nextConfig: NextConfig = {
   output: "standalone",
   images: {
-    remotePatterns: [],
+    remotePatterns: [
+      // S3-compatible storage (MinIO locally, AWS S3 / Cloudflare R2 in prod)
+      // Matches any hostname to cover both local and cloud deployments.
+      // Tighten this to your specific bucket hostname in production.
+      {
+        protocol: "http",
+        hostname: "**",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "**",
+        pathname: "/**",
+      },
+    ],
   },
   transpilePackages: ["@react-pdf/renderer"],
 };

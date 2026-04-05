@@ -3,8 +3,16 @@ import { Pool } from "pg";
 import { sql } from "drizzle-orm";
 import * as schema from "./schema";
 
+const databaseUrl = process.env.DATABASE_URL;
+if (!databaseUrl) {
+  throw new Error(
+    "Missing required environment variable: DATABASE_URL. " +
+      "Check your .env.local file or deployment configuration."
+  );
+}
+
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL!,
+  connectionString: databaseUrl,
   max: 10,
 });
 

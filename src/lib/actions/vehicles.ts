@@ -5,6 +5,7 @@ import { vehicles } from "@/db/schema";
 import { requireSession, isRole } from "@/lib/auth/session";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { validateVehicle } from "@/lib/validations";
 
 export type VehicleFormData = {
   name: string;
@@ -28,20 +29,22 @@ export async function createVehicle(data: VehicleFormData) {
     throw new Error("Forbidden");
   }
 
+  const validated = validateVehicle(data);
+
   await db.insert(vehicles).values({
-    name: data.name,
-    registrationNumber: data.registrationNumber || null,
-    vehicleType: data.vehicleType as never,
-    billingModel: data.billingModel as never,
-    ratePerHour: data.ratePerHour || null,
-    ratePerAcre: data.ratePerAcre || null,
-    ratePerKm: data.ratePerKm || null,
-    ratePerTask: data.ratePerTask || null,
-    fuelConsumptionBaseline: data.fuelConsumptionBaseline || null,
-    maintenanceIntervalHours: data.maintenanceIntervalHours ?? 250,
-    currentEngineHours: data.currentEngineHours || "0",
-    status: data.status as never,
-    notes: data.notes || null,
+    name: validated.name,
+    registrationNumber: validated.registrationNumber ?? null,
+    vehicleType: validated.vehicleType as never,
+    billingModel: validated.billingModel as never,
+    ratePerHour: validated.ratePerHour ?? null,
+    ratePerAcre: validated.ratePerAcre ?? null,
+    ratePerKm: validated.ratePerKm ?? null,
+    ratePerTask: validated.ratePerTask ?? null,
+    fuelConsumptionBaseline: validated.fuelConsumptionBaseline ?? null,
+    maintenanceIntervalHours: validated.maintenanceIntervalHours ?? 250,
+    currentEngineHours: validated.currentEngineHours ?? "0",
+    status: validated.status as never,
+    notes: validated.notes ?? null,
   });
 
   revalidatePath("/admin/vehicles");

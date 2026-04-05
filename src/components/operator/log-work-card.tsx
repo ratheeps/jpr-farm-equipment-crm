@@ -3,7 +3,7 @@
 import { useState, useTransition, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { MapPin, CheckCircle2, Clock, Fuel, Gauge, TreePine } from "lucide-react";
-import { startLog, endLog } from "@/lib/actions/daily-logs";
+import { startLog, endLog, getLastEndEngineHours } from "@/lib/actions/daily-logs";
 import { localDb } from "@/lib/offline/db";
 import { cn } from "@/lib/utils";
 
@@ -90,11 +90,17 @@ export function LogWorkCard({ todayLog, vehicles, projects }: Props) {
   // Active log (may update after start)
   const [activeLog, setActiveLog] = useState<ActiveLog | null>(todayLog);
 
-  // Prefill start engine hours from vehicle's current hours
+  // Prefill start engine hours from previous log's end hours, falling back to vehicle's current hours
   useEffect(() => {
     if (!activeLog && vehicleId) {
-      const v = vehicles.find((x) => x.id === vehicleId);
-      if (v?.currentEngineHours) setStartHours(v.currentEngineHours);
+      getLastEndEngineHours(vehicleId).then((lastEnd) => {
+        if (lastEnd) {
+          setStartHours(lastEnd);
+        } else {
+          const v = vehicles.find((x) => x.id === vehicleId);
+          if (v?.currentEngineHours) setStartHours(v.currentEngineHours);
+        }
+      });
     }
   }, [vehicleId, vehicles, activeLog]);
 
