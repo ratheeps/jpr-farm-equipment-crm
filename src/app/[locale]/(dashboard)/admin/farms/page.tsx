@@ -2,9 +2,11 @@ import { getTranslations } from "next-intl/server";
 import { Topbar } from "@/components/layout/topbar";
 import { getFarms } from "@/lib/actions/farms";
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { Plus, Wheat } from "lucide-react";
 import { getSession } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
+import { FarmListCard } from "@/components/farms/farm-list-card";
+import { EmptyState } from "@/components/ui/empty-state";
 
 export default async function FarmsPage({
   params,
@@ -19,9 +21,9 @@ export default async function FarmsPage({
   }
 
   const t = await getTranslations("farms");
-  const tCommon = await getTranslations("common");
 
   const allFarms = await getFarms();
+  const canDelete = session.role === "super_admin";
 
   return (
     <div>
@@ -36,49 +38,22 @@ export default async function FarmsPage({
         </Link>
 
         {allFarms.length === 0 ? (
-          <p className="text-center text-muted-foreground py-12">
-            {t("noFarms")}
-          </p>
+          <EmptyState
+            icon={Wheat}
+            title={t("noFarms")}
+            description={t("noFarmsDesc")}
+            actionLabel={t("add")}
+            actionHref={`/${locale}/admin/farms/new`}
+          />
         ) : (
           <div className="space-y-3">
             {allFarms.map((farm) => (
-              <Link
+              <FarmListCard
                 key={farm.id}
-                href={`/${locale}/admin/farms/${farm.id}`}
-                className="block bg-card border border-border rounded-xl p-4 active:scale-98 transition-transform"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-foreground truncate">
-                      {farm.name}
-                    </p>
-                    {farm.locationText && (
-                      <p className="text-sm text-muted-foreground truncate">
-                        {farm.locationText}
-                      </p>
-                    )}
-                  </div>
-                  <span
-                    className={`text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0 ${
-                      farm.isActive
-                        ? "bg-green-100 text-green-700"
-                        : "bg-gray-100 text-gray-700"
-                    }`}
-                  >
-                    {farm.isActive ? tCommon("active") : tCommon("inactive")}
-                  </span>
-                </div>
-                <div className="flex items-center gap-3 mt-2">
-                  <span className="text-xs text-muted-foreground">
-                    {farm.areaAcres} {t("areaAcres").replace("Area ", "").replace("(", "").replace(")", "")}
-                  </span>
-                  {farm.cycleCount > 0 && (
-                    <span className="text-xs text-muted-foreground ml-auto">
-                      {farm.cycleCount} {t("cycles").toLowerCase()}
-                    </span>
-                  )}
-                </div>
-              </Link>
+                farm={farm}
+                locale={locale}
+                canDelete={canDelete}
+              />
             ))}
           </div>
         )}

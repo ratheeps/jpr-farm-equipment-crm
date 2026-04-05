@@ -1,30 +1,70 @@
 import { getTranslations } from "next-intl/server";
 import { Topbar } from "@/components/layout/topbar";
 import Link from "next/link";
-import { Plus, FileText } from "lucide-react";
+import { Plus, FileText, Receipt } from "lucide-react";
 import { getSession } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
-import { getInvoices } from "@/lib/actions/invoices";
+import { db } from "@/db";
+import { invoices, projects } from "@/db/schema";
 import { InvoiceListCard } from "@/components/invoices/invoice-list-card";
+import { ListSearch } from "@/components/layout/list-search";
+import { Pagination } from "@/components/layout/pagination";
+import { ilike, or, desc, eq, sql } from "drizzle-orm";
+import { Suspense } from "react";
+import { EmptyState } from "@/components/ui/empty-state";
+
+const PAGE_SIZE = 20;
 
 export default async function InvoicesPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: string }>;
+  searchParams: Promise<{ q?: string; page?: string }>;
 }) {
   const { locale } = await params;
+  const { q, page: pageStr } = await searchParams;
   const session = await getSession();
   if (!session) redirect(`/${locale}/login`);
   if (!["super_admin", "admin"].includes(session.role)) {
     redirect(`/${locale}/operator`);
   }
 
-  const [t, tQ] = await Promise.all([
+  const [t, tQ, tCommon] = await Promise.all([
     getTranslations("invoices"),
     getTranslations("quotes"),
+    getTranslations("common"),
   ]);
 
-  const allInvoices = await getInvoices();
+  const page = Math.max(0, parseInt(pageStr ?? "0", 10));
+  const where = q
+    ? or(ilike(invoices.clientName, `%${q}%`), ilike(invoices.invoiceNumber, `%${q}%`))
+    : undefined;
+
+  const [allInvoices, [{ count }]] = await Promise.all([
+    db
+      .select({
+        id: invoices.id,
+        invoiceNumber: invoices.invoiceNumber,
+        clientName: invoices.clientName,
+        total: invoices.total,
+        status: invoices.status,
+        paymentDueDate: invoices.paymentDueDate,
+        paidDate: invoices.paidDate,
+        createdAt: invoices.createdAt,
+        projectName: projects.name,
+      })
+      .from(invoices)
+      .leftJoin(projects, eq(invoices.projectId, projects.id))
+      .where(where)
+      .orderBy(desc(invoices.createdAt))
+      .limit(PAGE_SIZE)
+      .offset(page * PAGE_SIZE),
+    db.select({ count: sql<number>`count(*)` }).from(invoices).where(where),
+  ]);
+
+  const totalPages = Math.ceil(Number(count) / PAGE_SIZE);
+  const canDelete = session.role === "super_admin";
 
   return (
     <div>
@@ -45,16 +85,32 @@ export default async function InvoicesPage({
           {tQ("title")}
         </Link>
 
+        <Suspense>
+          <ListSearch placeholder={tCommon("search")} />
+        </Suspense>
+
         {allInvoices.length === 0 ? (
-          <p className="text-center text-muted-foreground py-12">
-            {t("noInvoices")}
-          </p>
+          <EmptyState
+            icon={Receipt}
+            title={t("noInvoices")}
+            description={t("noInvoicesDesc")}
+            actionLabel={t("add")}
+            actionHref={`/${locale}/admin/invoices/new`}
+          />
         ) : (
-          <div className="space-y-3">
-            {allInvoices.map((inv) => (
-              <InvoiceListCard key={inv.id} inv={inv} locale={locale} />
-            ))}
-          </div>
+          <>
+            <div className="space-y-3">
+              {allInvoices.map((inv) => (
+                <InvoiceListCard key={inv.id} inv={inv} locale={locale} canDelete={canDelete} />
+              ))}
+            </div>
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              basePath={`/${locale}/admin/invoices`}
+              query={q}
+            />
+          </>
         )}
       </div>
     </div>

@@ -1,7 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import { Topbar } from "@/components/layout/topbar";
 import { getLogHistory } from "@/lib/actions/daily-logs";
-import { CheckCircle2, Clock, Fuel, Gauge } from "lucide-react";
+import { CheckCircle2, Clock, Fuel, Gauge, CheckCheck, RefreshCw } from "lucide-react";
 
 const vehicleTypeIcons: Record<string, string> = {
   excavator: "🏗️",
@@ -127,9 +127,16 @@ export default async function OperatorHistoryPage() {
                 )}
 
                 {log.syncStatus === "local" && (
-                  <p className="text-xs text-amber-600 font-medium">
+                  <div className="flex items-center gap-1 text-xs text-amber-600 font-medium border-t border-border pt-2">
+                    <RefreshCw className="h-3 w-3 animate-spin" />
                     {t("syncPending")}
-                  </p>
+                  </div>
+                )}
+                {log.syncStatus === "synced" && (
+                  <div className="flex items-center gap-1 text-xs text-green-600 border-t border-border pt-2">
+                    <CheckCheck className="h-3 w-3" />
+                    Synced
+                  </div>
                 )}
               </div>
             );

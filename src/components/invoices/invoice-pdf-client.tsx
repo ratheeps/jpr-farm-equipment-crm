@@ -12,6 +12,13 @@ import {
 import { Download } from "lucide-react";
 import type { InvoicePDFData } from "./invoice-actions";
 
+export interface CompanyProfile {
+  companyName: string;
+  address?: string | null;
+  phone?: string | null;
+  invoiceFooterNote?: string | null;
+}
+
 const PRIMARY  = "#121221"; // dark navy from logo
 const ACCENT   = "#ff9500"; // orange from logo
 const LIGHT_BG = "#f5f5f8";
@@ -271,11 +278,16 @@ function fmtLKR(value: string | number | null | undefined): string {
   })}LKR`;
 }
 
-function InvoiceDocument({ data }: { data: InvoicePDFData }) {
+function InvoiceDocument({ data, company }: { data: InvoicePDFData; company?: CompanyProfile }) {
   const discount  = parseFloat(data.discountAmount ?? "0") || 0;
   const tax       = parseFloat(data.taxAmount ?? "0") || 0;
   const totalPaid = (data.payments ?? []).reduce((s, p) => s + parseFloat(p.amount), 0);
   const balance   = Math.max(0, parseFloat(data.total) - totalPaid);
+
+  const companyName = company?.companyName ?? "JPR Brothers Construction (Pvt) Ltd";
+  const companyAddress = company?.address ?? "Puthukkulam, Kovilkkulam, Mannar, Sri Lanka.";
+  const companyPhone = company?.phone ?? "+94 77 818 0297";
+  const footerNote = company?.invoiceFooterNote ?? "If you have any questions about this invoice, please contact";
 
   return (
     <Document>
@@ -287,11 +299,11 @@ function InvoiceDocument({ data }: { data: InvoicePDFData }) {
           <View style={styles.headerRight}>
             <Text style={styles.invoiceTitle}>INVOICE</Text>
             <Text style={styles.companyName}>
-              JPR Brothers Construction (Pvt) Ltd
+              {companyName}
             </Text>
             <Text style={styles.companyAddress}>
-              Puthukkulam, Kovilkkulam, Mannar, Sri Lanka.{"\n"}
-              Phone Number: +94 77 818 0297
+              {companyAddress}{"\n"}
+              Phone Number: {companyPhone}
             </Text>
           </View>
         </View>
@@ -411,10 +423,10 @@ function InvoiceDocument({ data }: { data: InvoicePDFData }) {
         {/* ── Footer (centered) ── */}
         <View style={styles.footer}>
           <Text style={styles.footerText}>
-            If you have any questions about this invoice, please contact
+            {footerNote}
           </Text>
           <Text style={styles.footerPhone}>
-            +94 77 818 0297 / +94 77 136 2056
+            {companyPhone}
           </Text>
         </View>
 
@@ -423,9 +435,9 @@ function InvoiceDocument({ data }: { data: InvoicePDFData }) {
   );
 }
 
-export async function downloadPDF(data: InvoicePDFData, filename: string) {
+export async function downloadPDF(data: InvoicePDFData, filename: string, company?: CompanyProfile) {
   const { pdf } = await import("@react-pdf/renderer");
-  const blob = await pdf(<InvoiceDocument data={data} />).toBlob();
+  const blob = await pdf(<InvoiceDocument data={data} company={company} />).toBlob();
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
@@ -434,10 +446,10 @@ export async function downloadPDF(data: InvoicePDFData, filename: string) {
   URL.revokeObjectURL(url);
 }
 
-export function PDFDownloadButton({ data }: { data: InvoicePDFData }) {
+export function PDFDownloadButton({ data, company }: { data: InvoicePDFData; company?: CompanyProfile }) {
   return (
     <PDFDownloadLink
-      document={<InvoiceDocument data={data} />}
+      document={<InvoiceDocument data={data} company={company} />}
       fileName={`${data.invoiceNumber}.pdf`}
       className="flex-1 flex items-center justify-center gap-2 h-11 bg-primary text-primary-foreground rounded-xl font-semibold text-sm"
     >

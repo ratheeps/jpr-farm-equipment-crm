@@ -1,11 +1,12 @@
 import { getTranslations } from "next-intl/server";
 import { Topbar } from "@/components/layout/topbar";
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { Plus, FileText } from "lucide-react";
 import { getSession } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
 import { getQuotes } from "@/lib/actions/quotes";
 import { QuoteListCard } from "@/components/quotes/quote-list-card";
+import { EmptyState } from "@/components/ui/empty-state";
 
 export default async function QuotesPage({
   params,
@@ -22,6 +23,7 @@ export default async function QuotesPage({
   const t = await getTranslations("quotes");
 
   const allQuotes = await getQuotes();
+  const canDelete = session.role === "super_admin";
 
   return (
     <div>
@@ -36,13 +38,17 @@ export default async function QuotesPage({
         </Link>
 
         {allQuotes.length === 0 ? (
-          <p className="text-center text-muted-foreground py-12">
-            {t("noQuotes")}
-          </p>
+          <EmptyState
+            icon={FileText}
+            title={t("noQuotes")}
+            description={t("noQuotesDesc")}
+            actionLabel={t("add")}
+            actionHref={`/${locale}/admin/quotes/new`}
+          />
         ) : (
           <div className="space-y-3">
             {allQuotes.map((q) => (
-              <QuoteListCard key={q.id} q={q} locale={locale} />
+              <QuoteListCard key={q.id} q={q} locale={locale} canDelete={canDelete} />
             ))}
           </div>
         )}

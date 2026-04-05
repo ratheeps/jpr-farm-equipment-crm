@@ -3,7 +3,8 @@
 import { useRouter, useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { LanguageSwitcher } from "./language-switcher";
-import { LogOut, ArrowLeft } from "lucide-react";
+import { LogOut, ArrowLeft, Moon, Sun } from "lucide-react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 
 interface TopbarProps {
@@ -16,6 +17,22 @@ export function Topbar({ title, showBack }: TopbarProps) {
   const tCommon = useTranslations("common");
   const router = useRouter();
   const { locale } = useParams<{ locale: string }>();
+
+  const [dark, setDark] = useState(false);
+
+  useEffect(() => {
+    const stored = localStorage.getItem("theme");
+    const isDark = stored === "dark" || (!stored && window.matchMedia("(prefers-color-scheme: dark)").matches);
+    setDark(isDark);
+    document.documentElement.classList.toggle("dark", isDark);
+  }, []);
+
+  function toggleDark() {
+    const next = !dark;
+    setDark(next);
+    document.documentElement.classList.toggle("dark", next);
+    localStorage.setItem("theme", next ? "dark" : "light");
+  }
 
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -55,9 +72,16 @@ export function Topbar({ title, showBack }: TopbarProps) {
           </h1>
         )}
 
-        {/* Right: language switcher + logout */}
+        {/* Right: language switcher + dark mode + logout */}
         <div className="ml-auto flex items-center gap-1.5 shrink-0">
           <LanguageSwitcher />
+          <button
+            onClick={toggleDark}
+            className="h-9 w-9 flex items-center justify-center rounded-xl bg-secondary text-muted-foreground hover:bg-secondary/80 active:scale-95 transition-all"
+            title={dark ? "Light mode" : "Dark mode"}
+          >
+            {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          </button>
           <button
             onClick={handleLogout}
             className="h-9 w-9 flex items-center justify-center rounded-xl bg-secondary text-muted-foreground hover:bg-destructive/10 hover:text-destructive active:scale-95 transition-all"

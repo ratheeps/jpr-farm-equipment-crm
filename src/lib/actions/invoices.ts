@@ -132,6 +132,22 @@ export async function updateInvoice(id: string, data: InvoiceFormData) {
   revalidatePath(`/admin/invoices/${id}`);
 }
 
+export async function updateInvoiceStatus(
+  id: string,
+  status: "draft" | "sent" | "paid" | "overdue" | "cancelled"
+) {
+  const session = await requireSession();
+  if (!isRole(session, "super_admin", "admin")) {
+    throw new Error("Forbidden");
+  }
+  await db
+    .update(invoices)
+    .set({ status: status as never, updatedAt: new Date() })
+    .where(eq(invoices.id, id));
+  revalidatePath("/admin/invoices");
+  revalidatePath(`/admin/invoices/${id}`);
+}
+
 export async function deleteInvoice(id: string) {
   const session = await requireSession();
   if (!isRole(session, "super_admin", "admin")) {

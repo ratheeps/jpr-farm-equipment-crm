@@ -6,6 +6,7 @@ import { requireSession, isRole } from "@/lib/auth/session";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { validateVehicle } from "@/lib/validations";
+import { logAudit } from "@/lib/audit";
 
 export type VehicleFormData = {
   name: string;
@@ -47,6 +48,8 @@ export async function createVehicle(data: VehicleFormData) {
     notes: validated.notes ?? null,
   });
 
+  await logAudit("create", "vehicles", validated.name, session.userId, undefined, validated as Record<string, unknown>);
+
   revalidatePath("/admin/vehicles");
   revalidatePath("/owner");
 }
@@ -77,6 +80,25 @@ export async function updateVehicle(id: string, data: VehicleFormData) {
     })
     .where(eq(vehicles.id, id));
 
+  await logAudit("update", "vehicles", id, session.userId, undefined, data as unknown as Record<string, unknown>);
+
+  revalidatePath("/admin/vehicles");
+  revalidatePath(`/admin/vehicles/${id}`);
+}
+
+export async function updateVehicleStatus(
+  id: string,
+  status: "active" | "inactive" | "maintenance"
+) {
+  const session = await requireSession();
+  if (!isRole(session, "super_admin", "admin")) {
+    throw new Error("Forbidden");
+  }
+  await db
+    .update(vehicles)
+    .set({ status: status as never, updatedAt: new Date() })
+    .where(eq(vehicles.id, id));
+  await logAudit("update", "vehicles", id, session.userId, undefined, { status });
   revalidatePath("/admin/vehicles");
   revalidatePath(`/admin/vehicles/${id}`);
 }
@@ -88,6 +110,7 @@ export async function deleteVehicle(id: string) {
   }
 
   await db.update(vehicles).set({ status: "inactive" }).where(eq(vehicles.id, id));
+  await logAudit("deactivate", "vehicles", id, session.userId);
   revalidatePath("/admin/vehicles");
 }
 

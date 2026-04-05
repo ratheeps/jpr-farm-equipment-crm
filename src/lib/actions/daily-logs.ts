@@ -113,9 +113,12 @@ export async function endLog(
 
   const validated = validateEndLog(data);
 
-  // Fetch the current log to validate end > start engine hours
+  // Fetch the current log to validate end > start engine hours and fuel sanity
   const [currentLog] = await db
-    .select({ startEngineHours: dailyLogs.startEngineHours })
+    .select({
+      startEngineHours: dailyLogs.startEngineHours,
+      vehicleId: dailyLogs.vehicleId,
+    })
     .from(dailyLogs)
     .where(and(eq(dailyLogs.id, logId), eq(dailyLogs.operatorId, profile.id)));
 
@@ -127,6 +130,26 @@ export async function endLog(
     throw new Error(
       "End engine hours cannot be less than start engine hours"
     );
+  }
+
+  // Fuel sanity check: reject if fuel > 3× baseline × hours worked
+  if (validated.fuelUsedLiters && currentLog?.vehicleId) {
+    const [vehicleRow] = await db
+      .select({ fuelConsumptionBaseline: vehicles.fuelConsumptionBaseline })
+      .from(vehicles)
+      .where(eq(vehicles.id, currentLog.vehicleId));
+
+    const baseline = Number(vehicleRow?.fuelConsumptionBaseline ?? 0);
+    const hoursWorked = currentLog.startEngineHours
+      ? Number(validated.endEngineHours) - Number(currentLog.startEngineHours)
+      : 0;
+    const maxFuel = baseline > 0 && hoursWorked > 0 ? baseline * hoursWorked * 3 : 0;
+
+    if (maxFuel > 0 && Number(validated.fuelUsedLiters) > maxFuel) {
+      throw new Error(
+        `Fuel entered (${validated.fuelUsedLiters} L) is unreasonably high for ${hoursWorked.toFixed(1)} hours worked. Please verify.`
+      );
+    }
   }
 
   await db

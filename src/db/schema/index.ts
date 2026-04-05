@@ -13,3 +13,5 @@ export * from "./maintenance";
 export * from "./finance";
 export * from "./farms";
 export * from "./push-subscriptions";
+export * from "./audit-logs";
+export * from "./company-settings";

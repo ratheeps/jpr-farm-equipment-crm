@@ -92,6 +92,15 @@ async function seed() {
     .onConflictDoNothing();
   console.log("✓ Sample vehicles created");
 
+  // Company settings
+  await db
+    .insert(schema.companySettings)
+    .values({
+      companyName: "JPR BROTHERS CONSTRUCTION (PVT) LTD",
+    })
+    .onConflictDoNothing();
+  console.log("✓ Company settings created");
+
   console.log("Seed complete.");
   await pool.end();
 }

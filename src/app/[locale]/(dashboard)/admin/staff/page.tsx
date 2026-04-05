@@ -1,17 +1,29 @@
 import { getTranslations } from "next-intl/server";
 import { Topbar } from "@/components/layout/topbar";
-import { getStaffList } from "@/lib/actions/staff";
+import { db } from "@/db";
+import { users, staffProfiles } from "@/db/schema";
 import Link from "next/link";
-import { Plus, UserCircle } from "lucide-react";
+import { Plus, Users } from "lucide-react";
 import { getSession } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
+import { ilike, or, eq, sql } from "drizzle-orm";
+import { ListSearch } from "@/components/layout/list-search";
+import { Pagination } from "@/components/layout/pagination";
+import { Suspense } from "react";
+import { StaffListCard } from "@/components/staff/staff-list-card";
+import { EmptyState } from "@/components/ui/empty-state";
+
+const PAGE_SIZE = 20;
 
 export default async function StaffPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: string }>;
+  searchParams: Promise<{ q?: string; page?: string }>;
 }) {
   const { locale } = await params;
+  const { q, page: pageStr } = await searchParams;
   const session = await getSession();
   if (!session) redirect(`/${locale}/login`);
   if (!["super_admin", "admin"].includes(session.role)) {
@@ -19,16 +31,36 @@ export default async function StaffPage({
   }
 
   const t = await getTranslations("staff");
-  const tCommon = await getTranslations("common");
 
-  const staffList = await getStaffList();
+  const page = Math.max(0, parseInt(pageStr ?? "0", 10));
 
-  const roleColors: Record<string, string> = {
-    super_admin: "bg-purple-100 text-purple-700",
-    admin: "bg-blue-100 text-blue-700",
-    operator: "bg-green-100 text-green-700",
-    auditor: "bg-yellow-100 text-yellow-700",
-  };
+  const where = q
+    ? or(ilike(staffProfiles.fullName, `%${q}%`), ilike(staffProfiles.phone, `%${q}%`))
+    : undefined;
+
+  const [staffList, [{ count }]] = await Promise.all([
+    db
+      .select({
+        userId: users.id,
+        phone: users.phone,
+        role: users.role,
+        fullName: staffProfiles.fullName,
+      })
+      .from(users)
+      .leftJoin(staffProfiles, eq(staffProfiles.userId, users.id))
+      .where(where)
+      .orderBy(staffProfiles.fullName)
+      .limit(PAGE_SIZE)
+      .offset(page * PAGE_SIZE),
+    db
+      .select({ count: sql<number>`count(*)` })
+      .from(users)
+      .leftJoin(staffProfiles, eq(staffProfiles.userId, users.id))
+      .where(where),
+  ]);
+
+  const totalPages = Math.ceil(Number(count) / PAGE_SIZE);
+  const canDeactivate = session.role === "super_admin";
 
   return (
     <div>
@@ -42,37 +74,37 @@ export default async function StaffPage({
           {t("add")}
         </Link>
 
+        <Suspense>
+          <ListSearch placeholder="Search" />
+        </Suspense>
+
         {staffList.length === 0 ? (
-          <p className="text-center text-muted-foreground py-12">
-            {tCommon("noData")}
-          </p>
+          <EmptyState
+            icon={Users}
+            title={t("noStaff")}
+            description={t("noStaffDesc")}
+            actionLabel={t("add")}
+            actionHref={`/${locale}/admin/staff/new`}
+          />
         ) : (
-          <div className="space-y-3">
-            {staffList.map((s) => (
-              <Link
-                key={s.userId}
-                href={`/${locale}/admin/staff/${s.userId}`}
-                className="flex items-center gap-3 bg-card border border-border rounded-xl p-4 active:scale-98 transition-transform"
-              >
-                <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center flex-shrink-0">
-                  <UserCircle className="h-6 w-6 text-muted-foreground" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-foreground truncate">
-                    {s.fullName ?? s.phone}
-                  </p>
-                  <p className="text-xs text-muted-foreground">{s.phone}</p>
-                </div>
-                <span
-                  className={`text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0 ${
-                    roleColors[s.role] ?? "bg-secondary text-secondary-foreground"
-                  }`}
-                >
-                  {t(`roles.${s.role}` as Parameters<typeof t>[0])}
-                </span>
-              </Link>
-            ))}
-          </div>
+          <>
+            <div className="space-y-3">
+              {staffList.map((s) => (
+                <StaffListCard
+                  key={s.userId}
+                  s={s}
+                  locale={locale}
+                  canDeactivate={canDeactivate}
+                />
+              ))}
+            </div>
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              basePath={`/${locale}/admin/staff`}
+              query={q}
+            />
+          </>
         )}
       </div>
     </div>

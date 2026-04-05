@@ -7,6 +7,7 @@ import { hashPassword } from "@/lib/auth/password";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { validateStaff } from "@/lib/validations";
+import { logAudit } from "@/lib/audit";
 
 export type StaffFormData = {
   phone: string;
@@ -52,6 +53,8 @@ export async function createStaff(data: StaffFormData) {
     payType: validated.payType as never,
   });
 
+  await logAudit("create", "users", user.id, session.userId, undefined, { phone: validated.phone, role: validated.role });
+
   revalidatePath("/admin/staff");
 }
 
@@ -81,6 +84,8 @@ export async function updateStaff(userId: string, data: Omit<StaffFormData, "pas
       updatedAt: new Date(),
     })
     .where(eq(staffProfiles.userId, userId));
+
+  await logAudit("update", "users", userId, session.userId);
 
   revalidatePath("/admin/staff");
 }
@@ -146,6 +151,8 @@ export async function deactivateStaff(userId: string) {
     .update(users)
     .set({ isActive: false, updatedAt: new Date() })
     .where(eq(users.id, userId));
+
+  await logAudit("deactivate", "users", userId, session.userId);
 
   revalidatePath("/admin/staff");
 }

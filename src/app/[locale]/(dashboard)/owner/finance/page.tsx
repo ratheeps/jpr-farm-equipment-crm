@@ -4,21 +4,9 @@ import { getLoans, getReceivables, getFinanceSummary } from "@/lib/actions/finan
 import { getSession } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { Plus } from "lucide-react";
-
-const loanStatusColors: Record<string, string> = {
-  active: "bg-green-100 text-green-700",
-  completed: "bg-gray-100 text-gray-700",
-  defaulted: "bg-red-100 text-red-700",
-};
-
-const receivableStatusColors: Record<string, string> = {
-  pending: "bg-yellow-100 text-yellow-700",
-  partial: "bg-blue-100 text-blue-700",
-  paid: "bg-green-100 text-green-700",
-  overdue: "bg-red-100 text-red-700",
-  written_off: "bg-gray-100 text-gray-700",
-};
+import { Plus, DollarSign, TrendingDown } from "lucide-react";
+import { LoanListCard, ReceivableListCard } from "@/components/finance/finance-list-cards";
+import { EmptyState } from "@/components/ui/empty-state";
 
 export default async function OwnerFinancePage({
   params,
@@ -39,6 +27,8 @@ export default async function OwnerFinancePage({
     getLoans(),
     getReceivables(),
   ]);
+
+  const canDelete = session.role === "super_admin";
 
   return (
     <div>
@@ -103,47 +93,21 @@ export default async function OwnerFinancePage({
           </div>
 
           {allLoans.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-6">
-              {t("noLoans")}
-            </p>
+            <EmptyState
+              icon={TrendingDown}
+              title={t("noLoans")}
+              actionLabel={t("addLoan")}
+              actionHref={`/${locale}/owner/finance/loans/new`}
+            />
           ) : (
             <div className="space-y-2">
               {allLoans.map((loan) => (
-                <Link
+                <LoanListCard
                   key={loan.id}
-                  href={`/${locale}/owner/finance/loans/${loan.id}`}
-                  className="block bg-card border border-border rounded-xl p-4 active:scale-98 transition-transform"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-foreground truncate">
-                        {loan.lenderName}
-                      </p>
-                      {loan.vehicleName && (
-                        <p className="text-xs text-muted-foreground truncate">
-                          {loan.vehicleName}
-                        </p>
-                      )}
-                    </div>
-                    <span
-                      className={`text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0 ${
-                        loanStatusColors[loan.status] ??
-                        "bg-secondary text-secondary-foreground"
-                      }`}
-                    >
-                      {t(`loanStatuses.${loan.status}` as Parameters<typeof t>[0])}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-3 mt-2 flex-wrap">
-                    <span className="text-xs text-muted-foreground">
-                      {t(`loanTypes.${loan.loanType}` as Parameters<typeof t>[0])}
-                    </span>
-                    <span className="text-xs font-medium text-destructive ml-auto">
-                      {t("outstanding")}: Rs.{" "}
-                      {Number(loan.outstandingBalance).toLocaleString()}
-                    </span>
-                  </div>
-                </Link>
+                  loan={loan}
+                  locale={locale}
+                  canDelete={canDelete}
+                />
               ))}
             </div>
           )}
@@ -165,47 +129,21 @@ export default async function OwnerFinancePage({
           </div>
 
           {allReceivables.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-6">
-              {t("noReceivables")}
-            </p>
+            <EmptyState
+              icon={DollarSign}
+              title={t("noReceivables")}
+              actionLabel={t("addLending")}
+              actionHref={`/${locale}/owner/finance/receivables/new`}
+            />
           ) : (
             <div className="space-y-2">
               {allReceivables.map((rec) => (
-                <Link
+                <ReceivableListCard
                   key={rec.id}
-                  href={`/${locale}/owner/finance/receivables/${rec.id}`}
-                  className="block bg-card border border-border rounded-xl p-4 active:scale-98 transition-transform"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-foreground truncate">
-                        {rec.debtorName}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {t(`receivableTypes.${rec.type}` as Parameters<typeof t>[0])}
-                      </p>
-                    </div>
-                    <span
-                      className={`text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0 ${
-                        receivableStatusColors[rec.status] ??
-                        "bg-secondary text-secondary-foreground"
-                      }`}
-                    >
-                      {t(`receivableStatuses.${rec.status}` as Parameters<typeof t>[0])}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-3 mt-2">
-                    {rec.dueDate && (
-                      <span className="text-xs text-muted-foreground">
-                        Due: {rec.dueDate}
-                      </span>
-                    )}
-                    <span className="text-xs font-medium text-green-600 ml-auto">
-                      {t("outstanding")}: Rs.{" "}
-                      {Number(rec.outstandingBalance).toLocaleString()}
-                    </span>
-                  </div>
-                </Link>
+                  rec={rec}
+                  locale={locale}
+                  canDelete={canDelete}
+                />
               ))}
             </div>
           )}

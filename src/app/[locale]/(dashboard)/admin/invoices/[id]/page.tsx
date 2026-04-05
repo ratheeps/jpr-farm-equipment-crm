@@ -7,6 +7,7 @@ import { db } from "@/db";
 import { projects } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { getInvoice } from "@/lib/actions/invoices";
+import { getCompanySettings } from "@/lib/actions/company-settings";
 import { notFound } from "next/navigation";
 
 export default async function EditInvoicePage({
@@ -17,12 +18,13 @@ export default async function EditInvoicePage({
   const { locale, id } = await params;
   const t = await getTranslations("invoices");
 
-  const [result, activeProjects] = await Promise.all([
+  const [result, activeProjects, companyCfg] = await Promise.all([
     getInvoice(id),
     db
       .select({ id: projects.id, name: projects.name })
       .from(projects)
       .where(eq(projects.status, "active")),
+    getCompanySettings(),
   ]);
 
   if (!result) notFound();
@@ -66,6 +68,7 @@ export default async function EditInvoicePage({
             amount: item.amount,
           })),
         }}
+        company={companyCfg ?? undefined}
       />
 
       {/* Payments section */}

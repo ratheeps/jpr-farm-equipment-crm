@@ -3,17 +3,27 @@ import { db } from "@/db";
 import { vehicles } from "@/db/schema";
 import { Topbar } from "@/components/layout/topbar";
 import Link from "next/link";
-import { useLocale } from "next-intl";
-import { Plus, Wrench, CheckCircle, XCircle } from "lucide-react";
+import { Plus, Car } from "lucide-react";
 import { getSession } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
+import { ilike, or, sql } from "drizzle-orm";
+import { ListSearch } from "@/components/layout/list-search";
+import { Pagination } from "@/components/layout/pagination";
+import { Suspense } from "react";
+import { VehicleListCard } from "@/components/vehicles/vehicle-list-card";
+import { EmptyState } from "@/components/ui/empty-state";
+
+const PAGE_SIZE = 20;
 
 export default async function VehiclesPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: string }>;
+  searchParams: Promise<{ q?: string; page?: string }>;
 }) {
   const { locale } = await params;
+  const { q, page: pageStr } = await searchParams;
   const session = await getSession();
   if (!session) redirect(`/${locale}/login`);
   if (!["super_admin", "admin"].includes(session.role)) {
@@ -21,18 +31,19 @@ export default async function VehiclesPage({
   }
 
   const t = await getTranslations("vehicles");
-  const tCommon = await getTranslations("common");
 
-  const allVehicles = await db
-    .select()
-    .from(vehicles)
-    .orderBy(vehicles.name);
+  const page = Math.max(0, parseInt(pageStr ?? "0", 10));
+  const where = q
+    ? or(ilike(vehicles.name, `%${q}%`), ilike(vehicles.registrationNumber, `%${q}%`))
+    : undefined;
 
-  const statusIcon = {
-    active: <CheckCircle className="h-4 w-4 text-green-500" />,
-    inactive: <XCircle className="h-4 w-4 text-muted-foreground" />,
-    maintenance: <Wrench className="h-4 w-4 text-yellow-500" />,
-  };
+  const [allVehicles, [{ count }]] = await Promise.all([
+    db.select().from(vehicles).where(where).orderBy(vehicles.name).limit(PAGE_SIZE).offset(page * PAGE_SIZE),
+    db.select({ count: sql<number>`count(*)` }).from(vehicles).where(where),
+  ]);
+
+  const totalPages = Math.ceil(Number(count) / PAGE_SIZE);
+  const canDelete = session.role === "super_admin";
 
   return (
     <div>
@@ -47,46 +58,39 @@ export default async function VehiclesPage({
           {t("add")}
         </Link>
 
+        {/* Search */}
+        <Suspense>
+          <ListSearch placeholder="Search" />
+        </Suspense>
+
         {/* Vehicle cards */}
         {allVehicles.length === 0 ? (
-          <p className="text-center text-muted-foreground py-12">
-            {tCommon("noData")}
-          </p>
+          <EmptyState
+            icon={Car}
+            title={t("noVehicles")}
+            description={t("noVehiclesDesc")}
+            actionLabel={t("add")}
+            actionHref={`/${locale}/admin/vehicles/new`}
+          />
         ) : (
-          <div className="space-y-3">
-            {allVehicles.map((v) => (
-              <Link
-                key={v.id}
-                href={`/${locale}/admin/vehicles/${v.id}`}
-                className="block bg-card border border-border rounded-xl p-4 active:scale-98 transition-transform"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-foreground truncate">
-                      {v.name}
-                    </p>
-                    {v.registrationNumber && (
-                      <p className="text-xs text-muted-foreground">
-                        {v.registrationNumber}
-                      </p>
-                    )}
-                  </div>
-                  {statusIcon[v.status]}
-                </div>
-                <div className="flex items-center gap-3 mt-2 flex-wrap">
-                  <span className="text-xs bg-secondary text-secondary-foreground px-2 py-0.5 rounded-full">
-                    {t(`types.${v.vehicleType}` as Parameters<typeof t>[0])}
-                  </span>
-                  <span className="text-xs bg-secondary text-secondary-foreground px-2 py-0.5 rounded-full">
-                    {t(`billing.${v.billingModel}` as Parameters<typeof t>[0])}
-                  </span>
-                  <span className="text-xs text-muted-foreground ml-auto">
-                    {t("engineHours")}: {v.currentEngineHours}h
-                  </span>
-                </div>
-              </Link>
-            ))}
-          </div>
+          <>
+            <div className="space-y-3">
+              {allVehicles.map((v) => (
+                <VehicleListCard
+                  key={v.id}
+                  v={v}
+                  locale={locale}
+                  canDelete={canDelete}
+                />
+              ))}
+            </div>
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              basePath={`/${locale}/admin/vehicles`}
+              query={q}
+            />
+          </>
         )}
       </div>
     </div>

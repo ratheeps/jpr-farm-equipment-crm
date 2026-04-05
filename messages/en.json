@@ -25,7 +25,8 @@
     "amount": "Amount",
     "notes": "Notes",
     "phone": "Phone",
-    "name": "Name"
+    "name": "Name",
+    "deleteConfirm": "This action cannot be undone. Are you sure?"
   },
   "auth": {
     "login": "Login",
@@ -94,7 +95,9 @@
       "active": "Active",
       "inactive": "Inactive",
       "maintenance": "Maintenance"
-    }
+    },
+    "noVehicles": "No vehicles yet",
+    "noVehiclesDesc": "Add your first vehicle to start tracking"
   },
   "staff": {
     "title": "Staff",
@@ -117,7 +120,10 @@
       "daily": "Daily",
       "monthly": "Monthly",
       "per_acre": "Per Acre"
-    }
+    },
+    "deactivate": "Deactivate",
+    "noStaff": "No staff members yet",
+    "noStaffDesc": "Add your first staff member to get started"
   },
   "operator": {
     "startWork": "Start Work",
@@ -282,7 +288,9 @@
       "active": "Active",
       "completed": "Completed",
       "invoiced": "Invoiced"
-    }
+    },
+    "noProjects": "No projects yet",
+    "noProjectsDesc": "Create a project to start assigning vehicles and staff"
   },
   "farms": {
     "title": "Paddy Farms",
@@ -296,6 +304,7 @@
     "waterSource": "Water Source",
     "isActive": "Active",
     "noFarms": "No farms yet",
+    "noFarmsDesc": "Register a paddy farm to start tracking cycles and harvests",
     "deleteFarm": "Delete Farm",
     "farmDetails": "Farm Details",
     "season": "Season",
@@ -421,6 +430,7 @@
     "quoteNumber": "Quote Number",
     "validUntil": "Valid Until",
     "noQuotes": "No quotes yet",
+    "noQuotesDesc": "Create a quote to send to clients before invoicing",
     "convertToInvoice": "Convert to Invoice",
     "converting": "Converting...",
     "converted": "Converted to invoice"
@@ -449,6 +459,7 @@
     "lineAmount": "Amount",
     "noItems": "Add at least one line item",
     "noInvoices": "No invoices yet",
+    "noInvoicesDesc": "Create your first invoice to start billing clients",
     "payments": "Payments",
     "recordPayment": "Record Payment",
     "paymentAmount": "Amount Paid",

@@ -68,11 +68,19 @@ function toWhatsAppNumber(phone: string): string {
   return digits;
 }
 
-interface InvoiceActionsProps {
-  data: InvoicePDFData;
+export interface CompanyProfile {
+  companyName: string;
+  address?: string | null;
+  phone?: string | null;
+  invoiceFooterNote?: string | null;
 }
 
-export function InvoiceActions({ data }: InvoiceActionsProps) {
+interface InvoiceActionsProps {
+  data: InvoicePDFData;
+  company?: CompanyProfile;
+}
+
+export function InvoiceActions({ data, company }: InvoiceActionsProps) {
   const message = buildWhatsAppMessage(data);
   const encoded = encodeURIComponent(message);
   const waHref = data.clientPhone
@@ -81,7 +89,7 @@ export function InvoiceActions({ data }: InvoiceActionsProps) {
 
   return (
     <div className="flex gap-3 px-4 pb-4">
-      <PDFDownloadButton data={data} />
+      <PDFDownloadButton data={data} company={company} />
 
       <a
         href={waHref}

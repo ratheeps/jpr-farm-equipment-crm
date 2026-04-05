@@ -69,6 +69,22 @@ export async function updateProject(id: string, data: ProjectFormData) {
   revalidatePath(`/admin/projects/${id}`);
 }
 
+export async function updateProjectStatus(
+  id: string,
+  status: "planned" | "active" | "completed" | "invoiced"
+) {
+  const session = await requireSession();
+  if (!isRole(session, "super_admin", "admin")) {
+    throw new Error("Forbidden");
+  }
+  await db
+    .update(projects)
+    .set({ status: status as never, updatedAt: new Date() })
+    .where(eq(projects.id, id));
+  revalidatePath("/admin/projects");
+  revalidatePath(`/admin/projects/${id}`);
+}
+
 export async function deleteProject(id: string) {
   const session = await requireSession();
   if (!isRole(session, "super_admin")) {
