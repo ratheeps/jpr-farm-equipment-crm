@@ -1,0 +1,6 @@
+{
+  "crons": [
+    { "path": "/api/cron/alerts?mode=scan", "schedule": "*/15 * * * *" },
+    { "path": "/api/cron/alerts?mode=digest", "schedule": "30 1 * * *" }
+  ]
+}

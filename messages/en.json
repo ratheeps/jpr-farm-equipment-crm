@@ -605,7 +605,17 @@
     "idling": "{idleRatio}% idle ratio — {hours} hrs unproductive",
     "fuelOver": "Fuel over-reported by {pct}% ({liters}L)",
     "fuelUnder": "Fuel under-reported by {pct}% ({liters}L)",
-    "maintenanceOverdue": "{count, plural, one {# overdue service} other {# overdue services}}: {types}"
+    "maintenanceOverdue": "{count, plural, one {# overdue service} other {# overdue services}}: {types}",
+    "defaultIdleWarnPct": "Idle Warning Threshold (%)",
+    "defaultIdleCriticalPct": "Idle Critical Threshold (%)",
+    "defaultFuelVariancePct": "Fuel Variance Threshold (%)",
+    "alertThresholds": "Alert Thresholds",
+    "rescanNow": "Rescan Now",
+    "criticalAlerts": "Critical Alerts",
+    "dailyDigest": "Daily Digest",
+    "enablePushNotifications": "Enable Push Notifications",
+    "notificationPreferences": "Notification Preferences",
+    "unsubscribe": "Unsubscribe"
   },
   "dashboard": {
     "fleetPositions": "Fleet Positions",
