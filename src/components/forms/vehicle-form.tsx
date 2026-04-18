@@ -25,6 +25,8 @@ interface VehicleFormProps {
     ratePerAcre?: string | null;
     ratePerKm?: string | null;
     ratePerTask?: string | null;
+    operatorRatePerUnit?: string | null;
+    tripAllowance?: string | null;
     fuelConsumptionBaseline?: string | null;
     maintenanceIntervalHours?: number | null;
     currentEngineHours?: string | null;
@@ -47,6 +49,8 @@ export function VehicleForm({ locale, initial }: VehicleFormProps) {
     ratePerAcre: initial?.ratePerAcre ?? "",
     ratePerKm: initial?.ratePerKm ?? "",
     ratePerTask: initial?.ratePerTask ?? "",
+    operatorRatePerUnit: initial?.operatorRatePerUnit ?? "",
+    tripAllowance: initial?.tripAllowance ?? "",
     fuelConsumptionBaseline: initial?.fuelConsumptionBaseline ?? "",
     maintenanceIntervalHours: initial?.maintenanceIntervalHours ?? 250,
     currentEngineHours: initial?.currentEngineHours ?? "0",
@@ -189,6 +193,30 @@ export function VehicleForm({ locale, initial }: VehicleFormProps) {
             type="number"
             value={form.ratePerTask}
             onChange={(v) => set("ratePerTask", v)}
+            placeholder="0.00"
+            step="0.01"
+          />
+        </Field>
+      )}
+
+      {/* Operator Rate Per Unit — label changes based on billing model */}
+      <Field label={t(`operatorRatePer${form.billingModel === "hourly" ? "Hour" : form.billingModel === "per_acre" ? "Acre" : form.billingModel === "per_km" ? "Km" : "Task"}` as Parameters<typeof t>[0])}>
+        <Input
+          type="number"
+          value={form.operatorRatePerUnit}
+          onChange={(v) => set("operatorRatePerUnit", v)}
+          placeholder="0.00"
+          step="0.01"
+        />
+      </Field>
+
+      {/* Trip Allowance — only for transport trucks */}
+      {form.vehicleType === "transport_truck" && (
+        <Field label={t("tripAllowance")}>
+          <Input
+            type="number"
+            value={form.tripAllowance}
+            onChange={(v) => set("tripAllowance", v)}
             placeholder="0.00"
             step="0.01"
           />

@@ -51,6 +51,7 @@ export default async function ProjectDetailPage({
             status: project.status,
             estimatedHours: project.estimatedHours,
             estimatedCost: project.estimatedCost,
+            mobilizationFee: project.mobilizationFee,
             startDate: project.startDate,
             endDate: project.endDate,
             notes: project.notes,
