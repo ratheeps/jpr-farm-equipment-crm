@@ -13,6 +13,8 @@ interface PayrollCardProps {
   leaveDays: number | null;
   basePay: string | null;
   performanceBonus: string | null;
+  perUnitBonusTotal?: string | null;
+  tripAllowanceTotal?: string | null;
   netPay: string | null;
   status: string;
   onFinalize?: (id: string) => void;
@@ -48,6 +50,8 @@ export function PayrollCard({
   leaveDays,
   basePay,
   performanceBonus,
+  perUnitBonusTotal,
+  tripAllowanceTotal,
   netPay,
   status,
   onFinalize,
@@ -106,6 +110,18 @@ export function PayrollCard({
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Performance Bonus</span>
             <span className="font-medium text-green-600">+Rs.{bonus.toLocaleString()}</span>
+          </div>
+        )}
+        {Number(perUnitBonusTotal ?? 0) > 0 && (
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">Per-Unit Bonus</span>
+            <span className="font-medium text-green-600">+Rs.{Number(perUnitBonusTotal).toLocaleString()}</span>
+          </div>
+        )}
+        {Number(tripAllowanceTotal ?? 0) > 0 && (
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">Trip Allowance</span>
+            <span className="font-medium text-green-600">+Rs.{Number(tripAllowanceTotal).toLocaleString()}</span>
           </div>
         )}
         <div className="flex justify-between text-sm font-bold">

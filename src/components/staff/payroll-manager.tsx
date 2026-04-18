@@ -23,6 +23,8 @@ interface PayrollEntry {
   leaveDays: number | null;
   basePay: string | null;
   performanceBonus: string | null;
+  perUnitBonusTotal?: string | null;
+  tripAllowanceTotal?: string | null;
   netPay: string | null;
   status: string;
 }

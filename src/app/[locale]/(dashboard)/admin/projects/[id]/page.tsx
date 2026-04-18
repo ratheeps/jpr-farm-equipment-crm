@@ -2,6 +2,7 @@ import { getTranslations } from "next-intl/server";
 import { Topbar } from "@/components/layout/topbar";
 import { ProjectForm } from "@/components/forms/project-form";
 import { ProjectAssignments } from "@/components/projects/project-assignments";
+import { GenerateInvoiceButton } from "@/components/projects/generate-invoice-button";
 import { getProject } from "@/lib/actions/projects";
 import { getActiveVehicles } from "@/lib/actions/daily-logs";
 import { db } from "@/db";
@@ -40,6 +41,15 @@ export default async function ProjectDetailPage({
     <div>
       <Topbar title={t("edit")} showBack />
       <div className="px-4 py-4">
+        {/* Generate Invoice button */}
+        <div className="mb-4">
+          <GenerateInvoiceButton
+            projectId={project.id}
+            locale={locale}
+            disabled={project.status === "invoiced"}
+          />
+        </div>
+
         <ProjectForm
           locale={locale}
           initial={{
