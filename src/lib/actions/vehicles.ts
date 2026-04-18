@@ -17,6 +17,8 @@ export type VehicleFormData = {
   ratePerAcre?: string;
   ratePerKm?: string;
   ratePerTask?: string;
+  operatorRatePerUnit?: string;
+  tripAllowance?: string;
   fuelConsumptionBaseline?: string;
   maintenanceIntervalHours?: number;
   currentEngineHours?: string;
@@ -41,6 +43,8 @@ export async function createVehicle(data: VehicleFormData) {
     ratePerAcre: validated.ratePerAcre ?? null,
     ratePerKm: validated.ratePerKm ?? null,
     ratePerTask: validated.ratePerTask ?? null,
+    operatorRatePerUnit: validated.operatorRatePerUnit ?? null,
+    tripAllowance: validated.tripAllowance ?? null,
     fuelConsumptionBaseline: validated.fuelConsumptionBaseline ?? null,
     maintenanceIntervalHours: validated.maintenanceIntervalHours ?? 250,
     currentEngineHours: validated.currentEngineHours ?? "0",
@@ -60,6 +64,8 @@ export async function updateVehicle(id: string, data: VehicleFormData) {
     throw new Error("Forbidden");
   }
 
+  const validated = validateVehicle(data);
+
   await db
     .update(vehicles)
     .set({
@@ -71,6 +77,8 @@ export async function updateVehicle(id: string, data: VehicleFormData) {
       ratePerAcre: data.ratePerAcre || null,
       ratePerKm: data.ratePerKm || null,
       ratePerTask: data.ratePerTask || null,
+      operatorRatePerUnit: validated.operatorRatePerUnit ?? null,
+      tripAllowance: validated.tripAllowance ?? null,
       fuelConsumptionBaseline: data.fuelConsumptionBaseline || null,
       maintenanceIntervalHours: data.maintenanceIntervalHours ?? 250,
       currentEngineHours: data.currentEngineHours || "0",

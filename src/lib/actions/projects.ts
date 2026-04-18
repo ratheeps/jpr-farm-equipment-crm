@@ -14,6 +14,7 @@ export type ProjectFormData = {
   status: string;
   estimatedHours?: string;
   estimatedCost?: string;
+  mobilizationFee?: string;
   startDate?: string;
   endDate?: string;
   notes?: string;
@@ -33,6 +34,7 @@ export async function createProject(data: ProjectFormData) {
     status: data.status as never,
     estimatedHours: data.estimatedHours || null,
     estimatedCost: data.estimatedCost || null,
+    mobilizationFee: data.mobilizationFee || null,
     startDate: data.startDate || null,
     endDate: data.endDate || null,
     notes: data.notes || null,
@@ -58,6 +60,7 @@ export async function updateProject(id: string, data: ProjectFormData) {
       status: data.status as never,
       estimatedHours: data.estimatedHours || null,
       estimatedCost: data.estimatedCost || null,
+      mobilizationFee: data.mobilizationFee || null,
       startDate: data.startDate || null,
       endDate: data.endDate || null,
       notes: data.notes || null,
