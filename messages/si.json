@@ -26,7 +26,8 @@
     "notes": "සටහන්",
     "phone": "දුරකථනය",
     "name": "නම",
-    "deleteConfirm": "මෙම ක්‍රියාව වැරදි කරන්න පෙල් පීයය. නිවැරදිය඿ බව??"
+    "deleteConfirm": "මෙම ක්‍රියාව වැරදි කරන්න පෙල් පීයය. නිවැරදිය඿ බව??",
+    "exportCsv": "CSV අපනයනය"
   },
   "auth": {
     "login": "ප්‍රවේශ වන්න",
@@ -509,7 +510,10 @@
       "cancelled": "අවලංගු"
     },
     "generateInvoiceFromLogs": "වාර්තා වලින් ඉන්වොයිසය සාදන්න",
-    "noCompletedLogs": "ඉන්වොයිසය සෑදීමට සම්පූර්ණ වාර්තා නැත"
+    "noCompletedLogs": "ඉන්වොයිසය සෑදීමට සම්පූර්ණ වාර්තා නැත",
+    "shareOnWhatsApp": "WhatsApp හරහා බෙදාගන්න",
+    "downloadPDF": "PDF බාගන්න",
+    "uploadFailed": "උඩුගත කිරීම අසාර්ථකයි. PDF බාගෙන අතින් අමුණන්න."
   },
   "vehicleAssignments": {
     "title": "ක්‍රියාකරු පැවරුම",
@@ -585,7 +589,8 @@
     },
     "perUnitBonus": "ඒකක බෝනස්",
     "payBreakdown": "වැටුප් විස්තරය",
-    "unconfiguredVehicleWarning": "සමහර වාහන සඳහා ක්‍රියාකරු අනුපාතය සකසා නැත"
+    "unconfiguredVehicleWarning": "සමහර වාහන සඳහා ක්‍රියාකරු අනුපාතය සකසා නැත",
+    "payrollReset": "වැටුප් කාලය කෙටුම්පතට නැවත සකසන ලදී — නැවත ගණනය කරන්න"
   },
   "performance": {
     "title": "කාර්ය සාධනය",
@@ -623,5 +628,17 @@
     "assetCostsDesc": "වාහනයකට ගිණුම් ගත මුළු වියදම",
     "farmRoi": "ගොවිපල ROI",
     "farmRoiDesc": "සෑම ක්‍රියාකාරී ගොවිපලක ආයෝජන ප්‍රතිලාභය"
+  },
+  "dailyLogs": {
+    "adminLogs": "දෛනික සටහන්",
+    "filterLogs": "සටහන් පෙරහන",
+    "editLog": "සටහන සංස්කරණය",
+    "logEdited": "සටහන සාර්ථකව යාවත්කාලීන කරන ලදී",
+    "fieldNotEditable": "මෙම ක්ෂේත්‍රය සංස්කරණය කළ නොහැක",
+    "dateFrom": "ආරම්භ දිනය",
+    "dateTo": "අවසන් දිනය",
+    "syncStatus": "සමමුහුර්ත තත්ත්වය",
+    "applyFilters": "යොදන්න",
+    "resetFilters": "නැවත සකසන්න"
   }
 }

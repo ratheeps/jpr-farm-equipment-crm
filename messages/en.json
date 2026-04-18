@@ -26,7 +26,8 @@
     "notes": "Notes",
     "phone": "Phone",
     "name": "Name",
-    "deleteConfirm": "This action cannot be undone. Are you sure?"
+    "deleteConfirm": "This action cannot be undone. Are you sure?",
+    "exportCsv": "Export CSV"
   },
   "auth": {
     "login": "Login",
@@ -509,7 +510,10 @@
       "cancelled": "Cancelled"
     },
     "generateInvoiceFromLogs": "Generate Invoice from Logs",
-    "noCompletedLogs": "No completed logs to generate invoice"
+    "noCompletedLogs": "No completed logs to generate invoice",
+    "shareOnWhatsApp": "Share on WhatsApp",
+    "downloadPDF": "Download PDF",
+    "uploadFailed": "Upload failed. Download the PDF and attach manually."
   },
   "vehicleAssignments": {
     "title": "Operator Assignment",
@@ -585,7 +589,8 @@
     },
     "perUnitBonus": "Per-Unit Bonus",
     "payBreakdown": "Pay Breakdown",
-    "unconfiguredVehicleWarning": "Some vehicles have no operator rate configured"
+    "unconfiguredVehicleWarning": "Some vehicles have no operator rate configured",
+    "payrollReset": "Payroll period reset to draft — re-compute required"
   },
   "performance": {
     "title": "Staff Performance",
@@ -623,5 +628,17 @@
     "assetCostsDesc": "Total recorded expenses per vehicle",
     "farmRoi": "Farm ROI",
     "farmRoiDesc": "Return on investment per active farm"
+  },
+  "dailyLogs": {
+    "adminLogs": "Daily Logs",
+    "filterLogs": "Filter Logs",
+    "editLog": "Edit Log",
+    "logEdited": "Log updated successfully",
+    "fieldNotEditable": "This field cannot be edited",
+    "dateFrom": "From Date",
+    "dateTo": "To Date",
+    "syncStatus": "Sync Status",
+    "applyFilters": "Apply",
+    "resetFilters": "Reset"
   }
 }
