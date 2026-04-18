@@ -10,6 +10,9 @@
  *   VAPID_SUBJECT=mailto:admin@example.com
  */
 import webpush from "web-push";
+import { db } from "@/db";
+import { pushSubscriptions } from "@/db/schema";
+import { eq } from "drizzle-orm";
 
 const publicKey = process.env.VAPID_PUBLIC_KEY;
 const privateKey = process.env.VAPID_PRIVATE_KEY;
@@ -26,6 +29,7 @@ export interface PushPayload {
   body: string;
   tag?: string;
   icon?: string;
+  url?: string;
 }
 
 export async function sendPushNotification(
@@ -36,12 +40,21 @@ export async function sendPushNotification(
     console.warn("[push] VAPID keys not configured — skipping push notification");
     return;
   }
-  await webpush.sendNotification(
-    {
-      endpoint: subscription.endpoint,
-      keys: { p256dh: subscription.p256dh, auth: subscription.auth },
-    },
-    JSON.stringify(payload),
-    { TTL: 60 * 60 } // 1-hour time-to-live
-  );
+  try {
+    await webpush.sendNotification(
+      {
+        endpoint: subscription.endpoint,
+        keys: { p256dh: subscription.p256dh, auth: subscription.auth },
+      },
+      JSON.stringify(payload),
+      { TTL: 60 * 60 } // 1-hour time-to-live
+    );
+  } catch (err: unknown) {
+    const statusCode = (err as { statusCode?: number })?.statusCode;
+    if (statusCode === 404 || statusCode === 410) {
+      await db.delete(pushSubscriptions).where(eq(pushSubscriptions.endpoint, subscription.endpoint));
+      return;
+    }
+    throw err;
+  }
 }
