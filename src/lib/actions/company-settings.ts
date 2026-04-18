@@ -23,6 +23,9 @@ export async function upsertCompanySettings(data: {
   bankBranch?: string;
   logoUrl?: string;
   invoiceFooterNote?: string;
+  defaultIdleWarnPct?: string;
+  defaultIdleCriticalPct?: string;
+  defaultFuelVariancePct?: string;
 }) {
   const session = await requireSession();
   if (!isRole(session, "super_admin", "admin")) {
@@ -44,6 +47,9 @@ export async function upsertCompanySettings(data: {
     bankBranch: assertOptionalString(data.bankBranch) ?? null,
     logoUrl: assertOptionalString(data.logoUrl) ?? null,
     invoiceFooterNote: assertOptionalString(data.invoiceFooterNote) ?? null,
+    defaultIdleWarnPct: data.defaultIdleWarnPct || null,
+    defaultIdleCriticalPct: data.defaultIdleCriticalPct || null,
+    defaultFuelVariancePct: data.defaultFuelVariancePct || null,
     updatedAt: new Date(),
   };
 

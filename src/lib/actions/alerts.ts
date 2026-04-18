@@ -190,3 +190,27 @@ export async function sendDailyDigest() {
       .where(eq(pushSubscriptions.id, sub.id));
   }
 }
+
+export async function getOpenAlertEvents() {
+  const openEvents = await db
+    .select({
+      id: alertEvents.id,
+      type: alertEvents.type,
+      severity: alertEvents.severity,
+      vehicleId: alertEvents.vehicleId,
+      vehicleName: vehicles.name,
+      value: alertEvents.value,
+      detectedDate: alertEvents.detectedDate,
+    })
+    .from(alertEvents)
+    .innerJoin(vehicles, eq(alertEvents.vehicleId, vehicles.id))
+    .where(isNull(alertEvents.resolvedAt))
+    .orderBy(alertEvents.severity, alertEvents.detectedAt);
+
+  return openEvents.map((e) => ({
+    type: e.type as "idling" | "fuel_anomaly" | "maintenance_overdue",
+    severity: e.severity as "warning" | "critical",
+    vehicleName: e.vehicleName,
+    value: Number(e.value ?? 0),
+  }));
+}

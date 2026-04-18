@@ -24,6 +24,9 @@ export type VehicleFormData = {
   currentEngineHours?: string;
   status: string;
   notes?: string;
+  idleWarnPct?: string;
+  idleCriticalPct?: string;
+  fuelVariancePct?: string;
 };
 
 export async function createVehicle(data: VehicleFormData) {
@@ -50,6 +53,9 @@ export async function createVehicle(data: VehicleFormData) {
     currentEngineHours: validated.currentEngineHours ?? "0",
     status: validated.status as never,
     notes: validated.notes ?? null,
+    idleWarnPct: data.idleWarnPct || null,
+    idleCriticalPct: data.idleCriticalPct || null,
+    fuelVariancePct: data.fuelVariancePct || null,
   });
 
   await logAudit("create", "vehicles", validated.name, session.userId, undefined, validated as Record<string, unknown>);
@@ -84,6 +90,9 @@ export async function updateVehicle(id: string, data: VehicleFormData) {
       currentEngineHours: data.currentEngineHours || "0",
       status: data.status as never,
       notes: data.notes || null,
+      idleWarnPct: data.idleWarnPct || null,
+      idleCriticalPct: data.idleCriticalPct || null,
+      fuelVariancePct: data.fuelVariancePct || null,
       updatedAt: new Date(),
     })
     .where(eq(vehicles.id, id));

@@ -32,6 +32,9 @@ interface VehicleFormProps {
     currentEngineHours?: string | null;
     status: string;
     notes?: string | null;
+    idleWarnPct?: string | null;
+    idleCriticalPct?: string | null;
+    fuelVariancePct?: string | null;
   };
 }
 
@@ -56,6 +59,9 @@ export function VehicleForm({ locale, initial }: VehicleFormProps) {
     currentEngineHours: initial?.currentEngineHours ?? "0",
     status: initial?.status ?? "active",
     notes: initial?.notes ?? "",
+    idleWarnPct: initial?.idleWarnPct ?? "",
+    idleCriticalPct: initial?.idleCriticalPct ?? "",
+    fuelVariancePct: initial?.fuelVariancePct ?? "",
   });
 
   const [loading, setLoading] = useState(false);
@@ -275,6 +281,36 @@ export function VehicleForm({ locale, initial }: VehicleFormProps) {
           onChange={(e) => set("notes", e.target.value)}
           className="w-full px-4 py-3 border border-input rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring text-base resize-none"
           rows={3}
+        />
+      </Field>
+
+      {/* Alert Thresholds (optional) */}
+      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider pt-2">Alert Thresholds (optional)</p>
+      <Field label="Idle Warning Threshold (%)">
+        <Input
+          type="number"
+          value={form.idleWarnPct}
+          onChange={(v) => set("idleWarnPct", v)}
+          placeholder="Company default"
+          step="0.1"
+        />
+      </Field>
+      <Field label="Idle Critical Threshold (%)">
+        <Input
+          type="number"
+          value={form.idleCriticalPct}
+          onChange={(v) => set("idleCriticalPct", v)}
+          placeholder="Company default"
+          step="0.1"
+        />
+      </Field>
+      <Field label="Fuel Variance Threshold (%)">
+        <Input
+          type="number"
+          value={form.fuelVariancePct}
+          onChange={(v) => set("fuelVariancePct", v)}
+          placeholder="Company default"
+          step="0.1"
         />
       </Field>
 
