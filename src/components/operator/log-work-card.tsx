@@ -498,7 +498,7 @@ function CompletedLogsList({
   t,
 }: {
   logs: CompletedLog[];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // eslint-disable-next-line -- next-intl translation function
   t: any;
 }) {
   return (

@@ -295,6 +295,7 @@ export function InvoiceDocument({ data, company }: { data: InvoicePDFData; compa
 
         {/* ── Header ── */}
         <View style={styles.header}>
+          {/* eslint-disable-next-line jsx-a11y/alt-text -- react-pdf Image has no alt prop */}
           <Image style={styles.logo} src="/logo.png" />
           <View style={styles.headerRight}>
             <Text style={styles.invoiceTitle}>INVOICE</Text>

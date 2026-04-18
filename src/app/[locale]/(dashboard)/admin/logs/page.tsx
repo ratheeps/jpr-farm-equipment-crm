@@ -1,4 +1,3 @@
-import { getTranslations } from "next-intl/server";
 import { db } from "@/db";
 import { vehicles, staffProfiles } from "@/db/schema";
 import { Topbar } from "@/components/layout/topbar";

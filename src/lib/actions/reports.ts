@@ -727,6 +727,7 @@ export async function getExpenseAlerts(): Promise<ExpenseAlert[]> {
 
   for (const row of idlingRows) {
     const vehicle = vehicleMap.get(row.vehicleId);
+    if (!vehicle) continue;
     const criticalThreshold = resolveThreshold(vehicle, defaults, "idleCriticalPct");
     const warnThreshold = resolveThreshold(vehicle, defaults, "idleWarnPct");
 
@@ -754,6 +755,7 @@ export async function getExpenseAlerts(): Promise<ExpenseAlert[]> {
   for (const row of fuelRows) {
     if (!row.flagged) continue;
     const vehicle = vehicleMap.get(row.vehicleId);
+    if (!vehicle) continue;
     const fuelThreshold = resolveThreshold(vehicle, defaults, "fuelVariancePct");
     const pct = row.discrepancyPct ?? 0;
     const positive = pct > 0;

@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import dynamic from "next/dynamic";
 import { useState } from "react";
 import { MessageCircle, Loader2 } from "lucide-react";
@@ -67,7 +68,8 @@ function ShareWhatsAppButton({ data }: { data: QuotePDFData }) {
       const { pdf } = await import("@react-pdf/renderer");
       const { QuoteDocument } = await import("./quote-pdf-client");
       const { createElement } = await import("react");
-      const blob = await pdf(createElement(QuoteDocument, { data })).toBlob();
+      const doc = createElement(QuoteDocument, { data });
+      const blob = await pdf(doc as unknown as Parameters<typeof pdf>[0]).toBlob();
       const file = new File([blob], `${data.quoteNumber}.pdf`, { type: "application/pdf" });
 
       // Tier 1: Web Share API Level 2

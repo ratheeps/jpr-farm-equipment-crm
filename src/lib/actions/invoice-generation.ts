@@ -23,7 +23,7 @@ export async function generateFromProject(projectId: string) {
       id: string; name: string; mobilization_fee: string | null;
       mobilization_billed: boolean; client_name: string; client_phone: string | null;
     }>(sql`SELECT id, name, mobilization_fee, mobilization_billed, client_name, client_phone FROM projects WHERE id = ${projectId} FOR UPDATE`);
-    const project = projectRows.rows?.[0] ?? projectRows[0];
+    const project = projectRows.rows[0];
 
     if (!project) throw new Error("Project not found");
 

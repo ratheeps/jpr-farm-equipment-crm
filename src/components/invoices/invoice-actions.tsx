@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import dynamic from "next/dynamic";
 import { useState } from "react";
 import { MessageCircle, Loader2 } from "lucide-react";
@@ -87,7 +88,8 @@ function ShareWhatsAppButton({ data, company }: { data: InvoicePDFData; company?
       const { pdf } = await import("@react-pdf/renderer");
       const { InvoiceDocument } = await import("./invoice-pdf-client");
       const { createElement } = await import("react");
-      const blob = await pdf(createElement(InvoiceDocument, { data, company })).toBlob();
+      const doc = createElement(InvoiceDocument, { data, company });
+      const blob = await pdf(doc as unknown as Parameters<typeof pdf>[0]).toBlob();
       const file = new File([blob], `${data.invoiceNumber}.pdf`, { type: "application/pdf" });
 
       // Tier 1: Web Share API Level 2

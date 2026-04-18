@@ -13,16 +13,16 @@ const HARDCODED_FALLBACK = {
 type ThresholdField = keyof typeof FIELD_MAP;
 
 export function resolveThreshold(
-  vehicle: Record<string, string | null>,
-  companyDefaults: Record<string, string | null>,
+  vehicle: Record<string, unknown>,
+  companyDefaults: Record<string, unknown>,
   field: ThresholdField
 ): number {
   const vehicleVal = vehicle[field];
-  if (vehicleVal != null) return Number(vehicleVal);
+  if (vehicleVal != null && vehicleVal !== "") return Number(vehicleVal);
 
   const companyKey = FIELD_MAP[field];
   const companyVal = companyDefaults[companyKey];
-  if (companyVal != null) return Number(companyVal);
+  if (companyVal != null && companyVal !== "") return Number(companyVal);
 
   return HARDCODED_FALLBACK[field];
 }
