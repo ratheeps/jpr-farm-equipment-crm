@@ -15,12 +15,15 @@ export async function POST(req: NextRequest) {
   }
 
   const existing = await db
-    .select({ id: pushSubscriptions.id })
+    .select({ id: pushSubscriptions.id, userId: pushSubscriptions.userId })
     .from(pushSubscriptions)
     .where(eq(pushSubscriptions.endpoint, endpoint))
     .limit(1);
 
   if (existing.length > 0) {
+    if (existing[0].userId !== session.userId) {
+      return NextResponse.json({ error: "Subscription belongs to another user" }, { status: 403 });
+    }
     await db
       .update(pushSubscriptions)
       .set({

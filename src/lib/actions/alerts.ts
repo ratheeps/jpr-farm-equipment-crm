@@ -88,7 +88,13 @@ export async function scanAndPersistAlerts() {
     `);
   }
 
-  // Close events whose condition has cleared
+  // Only close events for alert types that were actually scanned in this run.
+  // If a report type returned data (even empty = no alerts), it was scanned successfully.
+  const scannedTypes = new Set<string>();
+  if (idlingRows != null) scannedTypes.add("idling");
+  if (fuelRows != null) scannedTypes.add("fuel_anomaly");
+  if (maintenanceRows != null) scannedTypes.add("maintenance_overdue");
+
   const activeVehicleIds = new Set(upserts.map((u) => `${u.type}:${u.vehicleId}`));
   const openEvents = await db
     .select({ id: alertEvents.id, type: alertEvents.type, vehicleId: alertEvents.vehicleId })
@@ -96,7 +102,7 @@ export async function scanAndPersistAlerts() {
     .where(isNull(alertEvents.resolvedAt));
 
   for (const ev of openEvents) {
-    if (!activeVehicleIds.has(`${ev.type}:${ev.vehicleId}`)) {
+    if (scannedTypes.has(ev.type) && !activeVehicleIds.has(`${ev.type}:${ev.vehicleId}`)) {
       await db.update(alertEvents)
         .set({ resolvedAt: new Date() })
         .where(eq(alertEvents.id, ev.id));

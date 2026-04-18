@@ -107,33 +107,37 @@ export async function updateLogByAdmin(
 
   if (!before) throw new Error("Log not found");
 
-  // Apply update
-  await db
-    .update(dailyLogs)
-    .set({ ...safePatch, updatedAt: new Date() } as Record<string, unknown>)
-    .where(eq(dailyLogs.id, logId));
+  // Wrap update + payroll reset + audit in a transaction for consistency
+  const affectedPayrolls = await db.transaction(async (tx) => {
+    await tx
+      .update(dailyLogs)
+      .set({ ...safePatch, updatedAt: new Date() } as Record<string, unknown>)
+      .where(eq(dailyLogs.id, logId));
 
-  // Payroll guard: if log falls in a finalized or paid payroll period, reset to draft
-  const affectedPayrolls = await db
-    .select({ id: payrollPeriods.id, status: payrollPeriods.status })
-    .from(payrollPeriods)
-    .where(
-      and(
-        eq(payrollPeriods.staffId, before.operatorId),
-        lte(payrollPeriods.periodStart, before.date),
-        gte(payrollPeriods.periodEnd, before.date),
-        inArray(payrollPeriods.status, ["finalized", "paid"])
-      )
-    );
+    // Payroll guard: if log falls in a finalized or paid payroll period, reset to draft
+    const affected = await tx
+      .select({ id: payrollPeriods.id, status: payrollPeriods.status })
+      .from(payrollPeriods)
+      .where(
+        and(
+          eq(payrollPeriods.staffId, before.operatorId),
+          lte(payrollPeriods.periodStart, before.date),
+          gte(payrollPeriods.periodEnd, before.date),
+          inArray(payrollPeriods.status, ["finalized", "paid"])
+        )
+      );
 
-  for (const pp of affectedPayrolls) {
-    await db
-      .update(payrollPeriods)
-      .set({ status: "draft", updatedAt: new Date() })
-      .where(eq(payrollPeriods.id, pp.id));
-  }
+    for (const pp of affected) {
+      await tx
+        .update(payrollPeriods)
+        .set({ status: "draft", updatedAt: new Date() })
+        .where(eq(payrollPeriods.id, pp.id));
+    }
 
-  await logAudit("update", "daily_logs", logId, session.userId, before as Record<string, unknown>, safePatch);
+    await logAudit("update", "daily_logs", logId, session.userId, before as Record<string, unknown>, safePatch);
+
+    return affected;
+  });
 
   revalidatePath("/admin/logs");
 

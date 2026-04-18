@@ -39,6 +39,7 @@ export async function generatePayroll(data: {
     .where(eq(staffProfiles.id, validated.staffId));
 
   if (!staff) throw new Error("Staff not found");
+  if (!staff.payType) throw new Error(`Staff ${validated.staffId} has no pay type configured`);
 
   const payRate = Number(staff.payRate ?? 0);
 
@@ -112,7 +113,7 @@ export async function generatePayroll(data: {
   const periodDays = Math.round((periodEnd.getTime() - periodStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
 
   const breakdown = computePayBreakdown({
-    payType: staff.payType!,
+    payType: staff.payType,
     payRate,
     logs: payrollLogs,
     logDays,

@@ -3,7 +3,7 @@
 import { db } from "@/db";
 import { companySettings } from "@/db/schema";
 import { requireSession, isRole } from "@/lib/auth/session";
-import { assertOptionalString, assertString } from "@/lib/validations";
+import { assertOptionalString, assertOptionalNumericString, assertString } from "@/lib/validations";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
@@ -47,9 +47,9 @@ export async function upsertCompanySettings(data: {
     bankBranch: assertOptionalString(data.bankBranch) ?? null,
     logoUrl: assertOptionalString(data.logoUrl) ?? null,
     invoiceFooterNote: assertOptionalString(data.invoiceFooterNote) ?? null,
-    defaultIdleWarnPct: data.defaultIdleWarnPct || null,
-    defaultIdleCriticalPct: data.defaultIdleCriticalPct || null,
-    defaultFuelVariancePct: data.defaultFuelVariancePct || null,
+    defaultIdleWarnPct: assertOptionalNumericString(data.defaultIdleWarnPct) ?? null,
+    defaultIdleCriticalPct: assertOptionalNumericString(data.defaultIdleCriticalPct) ?? null,
+    defaultFuelVariancePct: assertOptionalNumericString(data.defaultFuelVariancePct) ?? null,
     updatedAt: new Date(),
   };
 

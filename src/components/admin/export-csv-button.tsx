@@ -5,8 +5,17 @@ import { Download } from "lucide-react";
 
 export function ExportCsvButton({ filters }: { filters: AdminLogFilters }) {
   async function handleExport() {
-    // Fetch all pages by setting a large page size through multiple fetches
-    const { rows } = await getLogsForAdmin({ ...filters, page: 0 });
+    // Fetch all pages
+    let allRows: Awaited<ReturnType<typeof getLogsForAdmin>>["rows"] = [];
+    let page = 0;
+    let totalCount = Infinity;
+    while (allRows.length < totalCount) {
+      const result = await getLogsForAdmin({ ...filters, page });
+      allRows = allRows.concat(result.rows);
+      totalCount = result.totalCount;
+      page++;
+    }
+    const rows = allRows;
     const header = "Date,Vehicle,Operator,Start Hours,End Hours,Acres,Km,Fuel,Notes\n";
     const csv = header + rows.map((r) =>
       [
