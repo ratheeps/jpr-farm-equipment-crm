@@ -237,7 +237,7 @@ function fmtLKR(value: string | number | null | undefined): string {
   })}LKR`;
 }
 
-function QuoteDocument({ data }: { data: QuotePDFData }) {
+export function QuoteDocument({ data }: { data: QuotePDFData }) {
   return (
     <Document>
       <Page size="A4" style={styles.page}>
