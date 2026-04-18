@@ -28,6 +28,10 @@ export const vehicles = pgTable("vehicles", {
   ratePerAcre: numeric("rate_per_acre", { precision: 10, scale: 2 }),
   ratePerKm: numeric("rate_per_km", { precision: 10, scale: 2 }),
   ratePerTask: numeric("rate_per_task", { precision: 10, scale: 2 }),
+  // Operator pay per unit of output (billing-model-dependent)
+  operatorRatePerUnit: numeric("operator_rate_per_unit", { precision: 10, scale: 2 }),
+  // Default per-log trip allowance for truck drivers
+  tripAllowance: numeric("trip_allowance", { precision: 10, scale: 2 }),
   // Operational parameters
   fuelConsumptionBaseline: numeric("fuel_consumption_baseline", {
     precision: 8,

@@ -37,6 +37,7 @@ export const dailyLogs = pgTable("daily_logs", {
   fuelUsedLiters: numeric("fuel_used_liters", { precision: 8, scale: 2 }),
   kmTraveled: numeric("km_traveled", { precision: 8, scale: 1 }),
   acresWorked: numeric("acres_worked", { precision: 8, scale: 2 }),
+  tripAllowanceOverride: numeric("trip_allowance_override", { precision: 10, scale: 2 }),
   notes: text("notes"),
   syncStatus: syncStatusEnum("sync_status").notNull().default("synced"),
   clientDeviceId: text("client_device_id"), // for offline conflict resolution

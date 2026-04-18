@@ -35,6 +35,8 @@ export const payrollPeriods = pgTable("payroll_periods", {
   leaveDays: integer("leave_days").default(0),
   // Pay breakdown
   basePay: numeric("base_pay", { precision: 12, scale: 2 }).default("0"),
+  perUnitBonusTotal: numeric("per_unit_bonus_total", { precision: 12, scale: 2 }).default("0"),
+  tripAllowanceTotal: numeric("trip_allowance_total", { precision: 12, scale: 2 }).default("0"),
   performanceBonus: numeric("performance_bonus", {
     precision: 12,
     scale: 2,
