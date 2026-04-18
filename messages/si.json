@@ -110,6 +110,12 @@
       "inactive": "අක්‍රිය",
       "maintenance": "නඩත්තු"
     },
+    "operatorRatePerUnit": "ක්‍රියාකරු අනුපාතය / ඒකකය",
+    "operatorRatePerHour": "ක්‍රියාකරු අනුපාතය / පැය",
+    "operatorRatePerAcre": "ක්‍රියාකරු අනුපාතය / අක්කරය",
+    "operatorRatePerKm": "ක්‍රියාකරු අනුපාතය / කි.මී",
+    "operatorRatePerTask": "ක්‍රියාකරු අනුපාතය / කාර්යය",
+    "tripAllowance": "ගමන් දීමනාව",
     "noVehicles": "යාත්‍රා නොමැත",
     "noVehiclesDesc": "යාත්‍රා ඕල්ලදන්න පලමවර්ශයාව තේරාගන්න"
   },
@@ -177,7 +183,8 @@
     "noExpenses": "වියදම් වාර්තා නොමැත",
     "expenseAdded": "වියදම් එකතු කරන ලදී",
     "offlineBanner": "ඔබ නොබැඳිව සිටී — සම්බන්ධ වූ විට සමමුහූර්ත වේ",
-    "onlineRestored": "නැවත සම්බන්ධ විය — සමමුහූර්ත වෙමින්..."
+    "onlineRestored": "නැවත සම්බන්ධ විය — සමමුහූර්ත වෙමින්...",
+    "tripAllowanceOverride": "ගමන් දීමනාව (වෙනස් කිරීම)"
   },
   "expenses": {
     "categories": {
@@ -303,6 +310,7 @@
       "completed": "සම්පූර්ණ",
       "invoiced": "ඉන්වොයිස් කළ"
     },
+    "mobilizationFee": "සංචලන ගාස්තුව",
     "noProjects": "ව්‍යාප්‍රුති නොමැත",
     "noProjectsDesc": "පලමවර් ව්‍යාප්‍රුතිය ගොණනු සෛදු සදහන්න"
   },
@@ -495,7 +503,9 @@
       "paid": "ගෙවා ඇත",
       "overdue": "කල් ඉකුත්",
       "cancelled": "අවලංගු"
-    }
+    },
+    "generateInvoiceFromLogs": "වාර්තා වලින් ඉන්වොයිසය සාදන්න",
+    "noCompletedLogs": "ඉන්වොයිසය සෑදීමට සම්පූර්ණ වාර්තා නැත"
   },
   "vehicleAssignments": {
     "title": "ක්‍රියාකරු පැවරුම",
@@ -568,7 +578,10 @@
       "draft": "කෙටුම්පත",
       "finalized": "අවසන්",
       "paid": "ගෙවා"
-    }
+    },
+    "perUnitBonus": "ඒකක බෝනස්",
+    "payBreakdown": "වැටුප් විස්තරය",
+    "unconfiguredVehicleWarning": "සමහර වාහන සඳහා ක්‍රියාකරු අනුපාතය සකසා නැත"
   },
   "performance": {
     "title": "කාර්ය සාධනය",

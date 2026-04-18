@@ -110,6 +110,12 @@
       "inactive": "Inactive",
       "maintenance": "Maintenance"
     },
+    "operatorRatePerUnit": "Operator Rate / Unit",
+    "operatorRatePerHour": "Operator Rate / Hour",
+    "operatorRatePerAcre": "Operator Rate / Acre",
+    "operatorRatePerKm": "Operator Rate / Km",
+    "operatorRatePerTask": "Operator Rate / Task",
+    "tripAllowance": "Trip Allowance",
     "noVehicles": "No vehicles yet",
     "noVehiclesDesc": "Add your first vehicle to start tracking"
   },
@@ -177,7 +183,8 @@
     "noExpenses": "No expenses recorded",
     "expenseAdded": "Expense added",
     "offlineBanner": "You are offline — data will sync when connected",
-    "onlineRestored": "Back online — syncing..."
+    "onlineRestored": "Back online — syncing...",
+    "tripAllowanceOverride": "Trip Allowance (Override)"
   },
   "expenses": {
     "categories": {
@@ -303,6 +310,7 @@
       "completed": "Completed",
       "invoiced": "Invoiced"
     },
+    "mobilizationFee": "Mobilization Fee",
     "noProjects": "No projects yet",
     "noProjectsDesc": "Create a project to start assigning vehicles and staff"
   },
@@ -499,7 +507,9 @@
       "paid": "Paid",
       "overdue": "Overdue",
       "cancelled": "Cancelled"
-    }
+    },
+    "generateInvoiceFromLogs": "Generate Invoice from Logs",
+    "noCompletedLogs": "No completed logs to generate invoice"
   },
   "vehicleAssignments": {
     "title": "Operator Assignment",
@@ -572,7 +582,10 @@
       "draft": "Draft",
       "finalized": "Finalized",
       "paid": "Paid"
-    }
+    },
+    "perUnitBonus": "Per-Unit Bonus",
+    "payBreakdown": "Pay Breakdown",
+    "unconfiguredVehicleWarning": "Some vehicles have no operator rate configured"
   },
   "performance": {
     "title": "Staff Performance",

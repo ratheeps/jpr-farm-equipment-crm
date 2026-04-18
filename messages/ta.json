@@ -110,6 +110,12 @@
       "inactive": "செயலற்ற",
       "maintenance": "பராமரிப்பு"
     },
+    "operatorRatePerUnit": "இயக்குநர் கட்டணம் / அலகு",
+    "operatorRatePerHour": "இயக்குநர் கட்டணம் / மணி",
+    "operatorRatePerAcre": "இயக்குநர் கட்டணம் / ஏக்கர்",
+    "operatorRatePerKm": "இயக்குநர் கட்டணம் / கி.மீ",
+    "operatorRatePerTask": "இயக்குநர் கட்டணம் / பணி",
+    "tripAllowance": "பயண கொடுப்பனவு",
     "noVehicles": "வாகனங்கள் இல்லை",
     "noVehiclesDesc": "வாகனத்தை கண்காணிக்க முதல் வாகனத்தை சேர்க்கவும்"
   },
@@ -177,7 +183,8 @@
     "noExpenses": "செலவுகள் பதிவு இல்லை",
     "expenseAdded": "செலவு சேர்க்கப்பட்டது",
     "offlineBanner": "நீங்கள் ஆஃப்லைனில் உள்ளீர்கள் — இணைப்பு வந்தவுடன் ஒத்திசைக்கப்படும்",
-    "onlineRestored": "இணைப்பு வந்தது — ஒத்திசைக்கிறது..."
+    "onlineRestored": "இணைப்பு வந்தது — ஒத்திசைக்கிறது...",
+    "tripAllowanceOverride": "பயண கொடுப்பனவு (மாற்றம்)"
   },
   "expenses": {
     "categories": {
@@ -303,6 +310,7 @@
       "completed": "முடிந்தது",
       "invoiced": "இன்வாய்ஸ் செய்யப்பட்டது"
     },
+    "mobilizationFee": "அணிதிரட்டல் கட்டணம்",
     "noProjects": "திட்டங்கள் இல்லை",
     "noProjectsDesc": "முதல் திட்டத்தை உருவாக்கவும்"
   },
@@ -499,7 +507,9 @@
       "paid": "செலுத்தப்பட்டது",
       "overdue": "தாமதம்",
       "cancelled": "ரத்து செய்யப்பட்டது"
-    }
+    },
+    "generateInvoiceFromLogs": "பதிவுகளிலிருந்து விலைப்பட்டி உருவாக்கு",
+    "noCompletedLogs": "விலைப்பட்டி உருவாக்க முடிவுற்ற பதிவுகள் இல்லை"
   },
   "vehicleAssignments": {
     "title": "ஆபரேட்டர் நியமனம்",
@@ -572,7 +582,10 @@
       "draft": "வரைவு",
       "finalized": "இறுதிப்படுத்தப்பட்டது",
       "paid": "செலுத்தப்பட்டது"
-    }
+    },
+    "perUnitBonus": "அலகு வெகுமதி",
+    "payBreakdown": "சம்பள விவரம்",
+    "unconfiguredVehicleWarning": "சில வாகனங்களுக்கு இயக்குநர் கட்டணம் அமைக்கப்படவில்லை"
   },
   "performance": {
     "title": "பணியாளர் செயல்திறன்",
