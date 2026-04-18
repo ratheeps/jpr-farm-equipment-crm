@@ -44,6 +44,9 @@ export const vehicles = pgTable("vehicles", {
   }).default("0"),
   status: vehicleStatusEnum("status").notNull().default("active"),
   notes: text("notes"),
+  idleWarnPct: numeric("idle_warn_pct", { precision: 5, scale: 2 }),
+  idleCriticalPct: numeric("idle_critical_pct", { precision: 5, scale: 2 }),
+  fuelVariancePct: numeric("fuel_variance_pct", { precision: 5, scale: 2 }),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

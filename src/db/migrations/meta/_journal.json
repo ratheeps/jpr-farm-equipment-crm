@@ -64,6 +64,13 @@
       "when": 1776503371615,
       "tag": "0008_phase1_billing_pay",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1776505299009,
+      "tag": "0009_phase2_alerts_notifications",
+      "breakpoints": true
     }
   ]
 }
