@@ -167,14 +167,7 @@ self.addEventListener("notificationclick", (event) => {
   notifEvent.notification.close();
   const url = notifEvent.notification.data?.url ?? "/";
   notifEvent.waitUntil(
-    (self as unknown as ServiceWorkerGlobalScopeCompat).clients
-      .matchAll({ type: "window", includeUncontrolled: true })
-      .then((windowClients) => {
-        if (windowClients.length > 0) {
-          return windowClients[0].focus();
-        }
-        return (self as unknown as ServiceWorkerGlobalScopeCompat).clients.openWindow(url);
-      })
+    (self as unknown as ServiceWorkerGlobalScopeCompat).clients.openWindow(url)
   );
 });
 
