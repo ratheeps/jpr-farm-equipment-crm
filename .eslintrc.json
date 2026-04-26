@@ -2,7 +2,13 @@
   "extends": ["next/core-web-vitals"],
   "overrides": [
     {
-      "files": ["src/lib/actions/**/*.ts", "src/lib/actions/**/*.tsx", "src/app/api/**/*.ts", "src/app/api/**/*.tsx"],
+      "files": [
+        "src/lib/actions/**/*.ts",
+        "src/lib/actions/**/*.tsx",
+        "src/lib/audit.ts",
+        "src/app/api/**/*.ts",
+        "src/app/api/**/*.tsx"
+      ],
       "excludedFiles": ["src/app/api/health/route.ts"],
       "rules": {
         "no-restricted-syntax": [
