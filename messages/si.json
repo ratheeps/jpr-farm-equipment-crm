@@ -26,7 +26,8 @@
     "notes": "සටහන්",
     "phone": "දුරකථනය",
     "name": "නම",
-    "deleteConfirm": "මෙම ක්‍රියාව වැරදි කරන්න පෙල් පීයය. නිවැරදිය඿ බව??"
+    "deleteConfirm": "මෙම ක්‍රියාව වැරදි කරන්න පෙල් පීයය. නිවැරදිය඿ බව??",
+    "exportCsv": "CSV අපනයනය"
   },
   "auth": {
     "login": "ප්‍රවේශ වන්න",
@@ -110,6 +111,12 @@
       "inactive": "අක්‍රිය",
       "maintenance": "නඩත්තු"
     },
+    "operatorRatePerUnit": "ක්‍රියාකරු අනුපාතය / ඒකකය",
+    "operatorRatePerHour": "ක්‍රියාකරු අනුපාතය / පැය",
+    "operatorRatePerAcre": "ක්‍රියාකරු අනුපාතය / අක්කරය",
+    "operatorRatePerKm": "ක්‍රියාකරු අනුපාතය / කි.මී",
+    "operatorRatePerTask": "ක්‍රියාකරු අනුපාතය / කාර්යය",
+    "tripAllowance": "ගමන් දීමනාව",
     "noVehicles": "යාත්‍රා නොමැත",
     "noVehiclesDesc": "යාත්‍රා ඕල්ලදන්න පලමවර්ශයාව තේරාගන්න"
   },
@@ -177,7 +184,8 @@
     "noExpenses": "වියදම් වාර්තා නොමැත",
     "expenseAdded": "වියදම් එකතු කරන ලදී",
     "offlineBanner": "ඔබ නොබැඳිව සිටී — සම්බන්ධ වූ විට සමමුහූර්ත වේ",
-    "onlineRestored": "නැවත සම්බන්ධ විය — සමමුහූර්ත වෙමින්..."
+    "onlineRestored": "නැවත සම්බන්ධ විය — සමමුහූර්ත වෙමින්...",
+    "tripAllowanceOverride": "ගමන් දීමනාව (වෙනස් කිරීම)"
   },
   "expenses": {
     "categories": {
@@ -303,6 +311,7 @@
       "completed": "සම්පූර්ණ",
       "invoiced": "ඉන්වොයිස් කළ"
     },
+    "mobilizationFee": "සංචලන ගාස්තුව",
     "noProjects": "ව්‍යාප්‍රුති නොමැත",
     "noProjectsDesc": "පලමවර් ව්‍යාප්‍රුතිය ගොණනු සෛදු සදහන්න"
   },
@@ -317,7 +326,9 @@
     "soilType": "පස් වර්ගය",
     "waterSource": "ජල ප්‍රභවය",
     "isActive": "ක්‍රියාකාරී",
-    "noFarms": "ගොවිපළ නොමැත",    "noFarmsDesc": "පලමවර් ගොවිපර ෛල්දන්න සදහන්න",    "deleteFarm": "ගොවිපළ මකන්න",
+    "noFarms": "ගොවිපළ නොමැත",
+    "noFarmsDesc": "පලමවර් ගොවිපර ෛල්දන්න සදහන්න",
+    "deleteFarm": "ගොවිපළ මකන්න",
     "farmDetails": "ගොවිපළ විස්තර",
     "season": "කන්නය",
     "cycles": "වගා චක්‍ර",
@@ -470,7 +481,9 @@
     "rate": "අනුපාතය",
     "lineAmount": "මුදල",
     "noItems": "අවම වශයෙන් එක් ලයිනයක් එකතු කරන්න",
-    "noInvoices": "ඉන්වොයිස් නොමැත",    "noInvoicesDesc": "ගනුදහන්නට කයය් සදහන්න පලමවර් ඉන්වෝයිස්වක් සණන්න",    "payments": "ගෙවීම්",
+    "noInvoices": "ඉන්වොයිස් නොමැත",
+    "noInvoicesDesc": "ගනුදහන්නට කයය් සදහන්න පලමවර් ඉන්වෝයිස්වක් සණන්න",
+    "payments": "ගෙවීම්",
     "recordPayment": "ගෙවීම වාර්තා කරන්න",
     "paymentAmount": "ගෙවූ මුදල",
     "paymentType": "ගෙවීම් වර්ගය",
@@ -495,7 +508,12 @@
       "paid": "ගෙවා ඇත",
       "overdue": "කල් ඉකුත්",
       "cancelled": "අවලංගු"
-    }
+    },
+    "generateInvoiceFromLogs": "වාර්තා වලින් ඉන්වොයිසය සාදන්න",
+    "noCompletedLogs": "ඉන්වොයිසය සෑදීමට සම්පූර්ණ වාර්තා නැත",
+    "shareOnWhatsApp": "WhatsApp හරහා බෙදාගන්න",
+    "downloadPDF": "PDF බාගන්න",
+    "uploadFailed": "උඩුගත කිරීම අසාර්ථකයි. PDF බාගෙන අතින් අමුණන්න."
   },
   "vehicleAssignments": {
     "title": "ක්‍රියාකරු පැවරුම",
@@ -568,7 +586,11 @@
       "draft": "කෙටුම්පත",
       "finalized": "අවසන්",
       "paid": "ගෙවා"
-    }
+    },
+    "perUnitBonus": "ඒකක බෝනස්",
+    "payBreakdown": "වැටුප් විස්තරය",
+    "unconfiguredVehicleWarning": "සමහර වාහන සඳහා ක්‍රියාකරු අනුපාතය සකසා නැත",
+    "payrollReset": "වැටුප් කාලය කෙටුම්පතට නැවත සකසන ලදී — නැවත ගණනය කරන්න"
   },
   "performance": {
     "title": "කාර්ය සාධනය",
@@ -588,7 +610,17 @@
     "idling": "{idleRatio}% අක්‍රිය අනුපාතය — {hours} පැය ඵලදායී නොවේ",
     "fuelOver": "ඉන්ධන {pct}% ඉක්මවා වාර්තා කර ඇත ({liters}L)",
     "fuelUnder": "ඉන්ධන {pct}% අඩුවෙන් වාර්තා කර ඇත ({liters}L)",
-    "maintenanceOverdue": "{count, plural, one {# කාලය ඉකුත් සේවාවක්} other {# කාලය ඉකුත් සේවා}}: {types}"
+    "maintenanceOverdue": "{count, plural, one {# කාලය ඉකුත් සේවාවක්} other {# කාලය ඉකුත් සේවා}}: {types}",
+    "defaultIdleWarnPct": "නිෂ්ක්‍රිය අනතුරු ඇඟවීමේ සීමාව (%)",
+    "defaultIdleCriticalPct": "නිෂ්ක්‍රිය තීරණාත්මක සීමාව (%)",
+    "defaultFuelVariancePct": "ඉන්ධන විචලන සීමාව (%)",
+    "alertThresholds": "අනතුරු ඇඟවීමේ සීමාවන්",
+    "rescanNow": "දැන් නැවත පරිලෝකනය",
+    "criticalAlerts": "තීරණාත්මක අනතුරු ඇඟවීම්",
+    "dailyDigest": "දෛනික සාරාංශය",
+    "enablePushNotifications": "Push දැනුම්දීම් සක්‍රිය කරන්න",
+    "notificationPreferences": "දැනුම්දීම් මනාප",
+    "unsubscribe": "දායකත්වය අවලංගු කරන්න"
   },
   "dashboard": {
     "fleetPositions": "යාත්‍රා ස්ථාන",
@@ -596,5 +628,17 @@
     "assetCostsDesc": "වාහනයකට ගිණුම් ගත මුළු වියදම",
     "farmRoi": "ගොවිපල ROI",
     "farmRoiDesc": "සෑම ක්‍රියාකාරී ගොවිපලක ආයෝජන ප්‍රතිලාභය"
+  },
+  "dailyLogs": {
+    "adminLogs": "දෛනික සටහන්",
+    "filterLogs": "සටහන් පෙරහන",
+    "editLog": "සටහන සංස්කරණය",
+    "logEdited": "සටහන සාර්ථකව යාවත්කාලීන කරන ලදී",
+    "fieldNotEditable": "මෙම ක්ෂේත්‍රය සංස්කරණය කළ නොහැක",
+    "dateFrom": "ආරම්භ දිනය",
+    "dateTo": "අවසන් දිනය",
+    "syncStatus": "සමමුහුර්ත තත්ත්වය",
+    "applyFilters": "යොදන්න",
+    "resetFilters": "නැවත සකසන්න"
   }
 }

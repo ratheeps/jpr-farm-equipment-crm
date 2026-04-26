@@ -18,6 +18,7 @@ interface ProjectFormProps {
     status: ProjectStatus;
     estimatedHours?: string | null;
     estimatedCost?: string | null;
+    mobilizationFee?: string | null;
     startDate?: string | null;
     endDate?: string | null;
     notes?: string | null;
@@ -37,6 +38,7 @@ export function ProjectForm({ locale, initial }: ProjectFormProps) {
     status: (initial?.status ?? "planned") as ProjectStatus,
     estimatedHours: initial?.estimatedHours ?? "",
     estimatedCost: initial?.estimatedCost ?? "",
+    mobilizationFee: initial?.mobilizationFee ?? "",
     startDate: initial?.startDate ?? "",
     endDate: initial?.endDate ?? "",
     notes: initial?.notes ?? "",
@@ -167,6 +169,17 @@ export function ProjectForm({ locale, initial }: ProjectFormProps) {
           type="number"
           value={form.estimatedCost}
           onChange={(v) => set("estimatedCost", v)}
+          placeholder="0.00"
+          step="0.01"
+        />
+      </Field>
+
+      {/* Mobilization Fee */}
+      <Field label={t("mobilizationFee")}>
+        <Input
+          type="number"
+          value={form.mobilizationFee}
+          onChange={(v) => set("mobilizationFee", v)}
           placeholder="0.00"
           step="0.01"
         />

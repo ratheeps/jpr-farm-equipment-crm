@@ -145,6 +145,7 @@ export async function endLog(
     gpsLatEnd?: string;
     gpsLngEnd?: string;
     notes?: string;
+    tripAllowanceOverride?: string;
   }
 ) {
   const session = await requireSession();
@@ -203,6 +204,7 @@ export async function endLog(
       gpsLatEnd: validated.gpsLatEnd ?? null,
       gpsLngEnd: validated.gpsLngEnd ?? null,
       notes: validated.notes ?? null,
+      tripAllowanceOverride: validated.tripAllowanceOverride ?? null,
       updatedAt: new Date(),
     })
     .where(

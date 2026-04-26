@@ -25,11 +25,16 @@ interface VehicleFormProps {
     ratePerAcre?: string | null;
     ratePerKm?: string | null;
     ratePerTask?: string | null;
+    operatorRatePerUnit?: string | null;
+    tripAllowance?: string | null;
     fuelConsumptionBaseline?: string | null;
     maintenanceIntervalHours?: number | null;
     currentEngineHours?: string | null;
     status: string;
     notes?: string | null;
+    idleWarnPct?: string | null;
+    idleCriticalPct?: string | null;
+    fuelVariancePct?: string | null;
   };
 }
 
@@ -47,11 +52,16 @@ export function VehicleForm({ locale, initial }: VehicleFormProps) {
     ratePerAcre: initial?.ratePerAcre ?? "",
     ratePerKm: initial?.ratePerKm ?? "",
     ratePerTask: initial?.ratePerTask ?? "",
+    operatorRatePerUnit: initial?.operatorRatePerUnit ?? "",
+    tripAllowance: initial?.tripAllowance ?? "",
     fuelConsumptionBaseline: initial?.fuelConsumptionBaseline ?? "",
     maintenanceIntervalHours: initial?.maintenanceIntervalHours ?? 250,
     currentEngineHours: initial?.currentEngineHours ?? "0",
     status: initial?.status ?? "active",
     notes: initial?.notes ?? "",
+    idleWarnPct: initial?.idleWarnPct ?? "",
+    idleCriticalPct: initial?.idleCriticalPct ?? "",
+    fuelVariancePct: initial?.fuelVariancePct ?? "",
   });
 
   const [loading, setLoading] = useState(false);
@@ -195,6 +205,30 @@ export function VehicleForm({ locale, initial }: VehicleFormProps) {
         </Field>
       )}
 
+      {/* Operator Rate Per Unit — label changes based on billing model */}
+      <Field label={t(`operatorRatePer${form.billingModel === "hourly" ? "Hour" : form.billingModel === "per_acre" ? "Acre" : form.billingModel === "per_km" ? "Km" : "Task"}` as Parameters<typeof t>[0])}>
+        <Input
+          type="number"
+          value={form.operatorRatePerUnit}
+          onChange={(v) => set("operatorRatePerUnit", v)}
+          placeholder="0.00"
+          step="0.01"
+        />
+      </Field>
+
+      {/* Trip Allowance — only for transport trucks */}
+      {form.vehicleType === "transport_truck" && (
+        <Field label={t("tripAllowance")}>
+          <Input
+            type="number"
+            value={form.tripAllowance}
+            onChange={(v) => set("tripAllowance", v)}
+            placeholder="0.00"
+            step="0.01"
+          />
+        </Field>
+      )}
+
       {/* Fuel baseline */}
       <Field label={t("fuelBaseline")}>
         <Input
@@ -247,6 +281,36 @@ export function VehicleForm({ locale, initial }: VehicleFormProps) {
           onChange={(e) => set("notes", e.target.value)}
           className="w-full px-4 py-3 border border-input rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring text-base resize-none"
           rows={3}
+        />
+      </Field>
+
+      {/* Alert Thresholds (optional) */}
+      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider pt-2">Alert Thresholds (optional)</p>
+      <Field label="Idle Warning Threshold (%)">
+        <Input
+          type="number"
+          value={form.idleWarnPct}
+          onChange={(v) => set("idleWarnPct", v)}
+          placeholder="Company default"
+          step="0.1"
+        />
+      </Field>
+      <Field label="Idle Critical Threshold (%)">
+        <Input
+          type="number"
+          value={form.idleCriticalPct}
+          onChange={(v) => set("idleCriticalPct", v)}
+          placeholder="Company default"
+          step="0.1"
+        />
+      </Field>
+      <Field label="Fuel Variance Threshold (%)">
+        <Input
+          type="number"
+          value={form.fuelVariancePct}
+          onChange={(v) => set("fuelVariancePct", v)}
+          placeholder="Company default"
+          step="0.1"
         />
       </Field>
 

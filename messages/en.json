@@ -26,7 +26,8 @@
     "notes": "Notes",
     "phone": "Phone",
     "name": "Name",
-    "deleteConfirm": "This action cannot be undone. Are you sure?"
+    "deleteConfirm": "This action cannot be undone. Are you sure?",
+    "exportCsv": "Export CSV"
   },
   "auth": {
     "login": "Login",
@@ -110,6 +111,12 @@
       "inactive": "Inactive",
       "maintenance": "Maintenance"
     },
+    "operatorRatePerUnit": "Operator Rate / Unit",
+    "operatorRatePerHour": "Operator Rate / Hour",
+    "operatorRatePerAcre": "Operator Rate / Acre",
+    "operatorRatePerKm": "Operator Rate / Km",
+    "operatorRatePerTask": "Operator Rate / Task",
+    "tripAllowance": "Trip Allowance",
     "noVehicles": "No vehicles yet",
     "noVehiclesDesc": "Add your first vehicle to start tracking"
   },
@@ -177,7 +184,8 @@
     "noExpenses": "No expenses recorded",
     "expenseAdded": "Expense added",
     "offlineBanner": "You are offline — data will sync when connected",
-    "onlineRestored": "Back online — syncing..."
+    "onlineRestored": "Back online — syncing...",
+    "tripAllowanceOverride": "Trip Allowance (Override)"
   },
   "expenses": {
     "categories": {
@@ -303,6 +311,7 @@
       "completed": "Completed",
       "invoiced": "Invoiced"
     },
+    "mobilizationFee": "Mobilization Fee",
     "noProjects": "No projects yet",
     "noProjectsDesc": "Create a project to start assigning vehicles and staff"
   },
@@ -499,7 +508,12 @@
       "paid": "Paid",
       "overdue": "Overdue",
       "cancelled": "Cancelled"
-    }
+    },
+    "generateInvoiceFromLogs": "Generate Invoice from Logs",
+    "noCompletedLogs": "No completed logs to generate invoice",
+    "shareOnWhatsApp": "Share on WhatsApp",
+    "downloadPDF": "Download PDF",
+    "uploadFailed": "Upload failed. Download the PDF and attach manually."
   },
   "vehicleAssignments": {
     "title": "Operator Assignment",
@@ -572,7 +586,11 @@
       "draft": "Draft",
       "finalized": "Finalized",
       "paid": "Paid"
-    }
+    },
+    "perUnitBonus": "Per-Unit Bonus",
+    "payBreakdown": "Pay Breakdown",
+    "unconfiguredVehicleWarning": "Some vehicles have no operator rate configured",
+    "payrollReset": "Payroll period reset to draft — re-compute required"
   },
   "performance": {
     "title": "Staff Performance",
@@ -592,7 +610,17 @@
     "idling": "{idleRatio}% idle ratio — {hours} hrs unproductive",
     "fuelOver": "Fuel over-reported by {pct}% ({liters}L)",
     "fuelUnder": "Fuel under-reported by {pct}% ({liters}L)",
-    "maintenanceOverdue": "{count, plural, one {# overdue service} other {# overdue services}}: {types}"
+    "maintenanceOverdue": "{count, plural, one {# overdue service} other {# overdue services}}: {types}",
+    "defaultIdleWarnPct": "Idle Warning Threshold (%)",
+    "defaultIdleCriticalPct": "Idle Critical Threshold (%)",
+    "defaultFuelVariancePct": "Fuel Variance Threshold (%)",
+    "alertThresholds": "Alert Thresholds",
+    "rescanNow": "Rescan Now",
+    "criticalAlerts": "Critical Alerts",
+    "dailyDigest": "Daily Digest",
+    "enablePushNotifications": "Enable Push Notifications",
+    "notificationPreferences": "Notification Preferences",
+    "unsubscribe": "Unsubscribe"
   },
   "dashboard": {
     "fleetPositions": "Fleet Positions",
@@ -600,5 +628,17 @@
     "assetCostsDesc": "Total recorded expenses per vehicle",
     "farmRoi": "Farm ROI",
     "farmRoiDesc": "Return on investment per active farm"
+  },
+  "dailyLogs": {
+    "adminLogs": "Daily Logs",
+    "filterLogs": "Filter Logs",
+    "editLog": "Edit Log",
+    "logEdited": "Log updated successfully",
+    "fieldNotEditable": "This field cannot be edited",
+    "dateFrom": "From Date",
+    "dateTo": "To Date",
+    "syncStatus": "Sync Status",
+    "applyFilters": "Apply",
+    "resetFilters": "Reset"
   }
 }

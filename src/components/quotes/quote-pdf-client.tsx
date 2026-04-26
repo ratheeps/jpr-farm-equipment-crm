@@ -237,13 +237,14 @@ function fmtLKR(value: string | number | null | undefined): string {
   })}LKR`;
 }
 
-function QuoteDocument({ data }: { data: QuotePDFData }) {
+export function QuoteDocument({ data }: { data: QuotePDFData }) {
   return (
     <Document>
       <Page size="A4" style={styles.page}>
 
         {/* ── Header ── */}
         <View style={styles.header}>
+          {/* eslint-disable-next-line jsx-a11y/alt-text -- react-pdf Image has no alt prop */}
           <Image style={styles.logo} src="/logo.png" />
           <View style={styles.headerRight}>
             <Text style={styles.docTitle}>QUOTATION</Text>

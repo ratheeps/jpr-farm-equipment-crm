@@ -24,6 +24,8 @@ export const projects = pgTable("projects", {
   status: projectStatusEnum("status").notNull().default("planned"),
   estimatedHours: numeric("estimated_hours", { precision: 10, scale: 1 }),
   estimatedCost: numeric("estimated_cost", { precision: 12, scale: 2 }),
+  mobilizationFee: numeric("mobilization_fee", { precision: 12, scale: 2 }),
+  mobilizationBilled: boolean("mobilization_billed").notNull().default(false),
   startDate: date("start_date"),
   endDate: date("end_date"),
   notes: text("notes"),

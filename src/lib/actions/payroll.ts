@@ -7,12 +7,14 @@ import {
   dailyLogs,
   staffLeaves,
   users,
+  vehicles,
 } from "@/db/schema";
 import { requireSession, isRole } from "@/lib/auth/session";
 import { eq, and, gte, lte, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { logAudit } from "@/lib/audit";
 import { validatePayrollGeneration } from "@/lib/validations";
+import { computePayBreakdown } from "@/lib/payroll-calc";
 
 // ─── Generate payroll for a single staff member for a period ─────────────────
 
@@ -37,18 +39,26 @@ export async function generatePayroll(data: {
     .where(eq(staffProfiles.id, validated.staffId));
 
   if (!staff) throw new Error("Staff not found");
+  if (!staff.payType) throw new Error(`Staff ${validated.staffId} has no pay type configured`);
 
   const payRate = Number(staff.payRate ?? 0);
 
-  // Aggregate daily logs for this staff member in the period
-  const [logAgg] = await db
+  // Fetch individual logs with their vehicle data for per-unit bonus calculation
+  const logsWithVehicles = await db
     .select({
-      totalHours: sql<string>`COALESCE(SUM(${dailyLogs.endEngineHours} - ${dailyLogs.startEngineHours}), 0)`,
-      totalAcres: sql<string>`COALESCE(SUM(${dailyLogs.acresWorked}), 0)`,
-      totalKm: sql<string>`COALESCE(SUM(${dailyLogs.kmTraveled}), 0)`,
-      logDays: sql<string>`COUNT(DISTINCT ${dailyLogs.date})`,
+      startEngineHours: dailyLogs.startEngineHours,
+      endEngineHours: dailyLogs.endEngineHours,
+      acresWorked: dailyLogs.acresWorked,
+      kmTraveled: dailyLogs.kmTraveled,
+      tripAllowanceOverride: dailyLogs.tripAllowanceOverride,
+      vehicleId: vehicles.id,
+      vehicleBillingModel: vehicles.billingModel,
+      vehicleOperatorRate: vehicles.operatorRatePerUnit,
+      vehicleTripAllowance: vehicles.tripAllowance,
+      logDate: dailyLogs.date,
     })
     .from(dailyLogs)
+    .innerJoin(vehicles, eq(dailyLogs.vehicleId, vehicles.id))
     .where(
       and(
         eq(dailyLogs.operatorId, validated.staffId),
@@ -58,12 +68,20 @@ export async function generatePayroll(data: {
       )
     );
 
-  const totalHours = Number(logAgg?.totalHours ?? 0);
-  const totalAcres = Number(logAgg?.totalAcres ?? 0);
-  const totalKm = Number(logAgg?.totalKm ?? 0);
-  const logDays = Number(logAgg?.logDays ?? 0);
+  const logDays = new Set(logsWithVehicles.map((l) => l.logDate)).size;
 
-  // Count approved leave days in the period
+  // Count leave days — for monthly pay type, only unpaid leave is deducted (Spec §2.2)
+  const leaveConditions = [
+    eq(staffLeaves.staffId, validated.staffId),
+    gte(staffLeaves.startDate, validated.periodStart),
+    lte(staffLeaves.startDate, validated.periodEnd),
+    eq(staffLeaves.status, "approved"),
+  ];
+
+  if (staff.payType === "monthly") {
+    leaveConditions.push(eq(staffLeaves.leaveType, "unpaid"));
+  }
+
   const [leaveAgg] = await db
     .select({
       leaveDays: sql<string>`COALESCE(SUM(
@@ -71,40 +89,53 @@ export async function generatePayroll(data: {
       ), 0)`,
     })
     .from(staffLeaves)
-    .where(
-      and(
-        eq(staffLeaves.staffId, validated.staffId),
-        eq(staffLeaves.status, "approved"),
-        gte(staffLeaves.startDate, validated.periodStart),
-        lte(staffLeaves.endDate, validated.periodEnd)
-      )
-    );
+    .where(and(...leaveConditions));
 
   const leaveDays = Number(leaveAgg?.leaveDays ?? 0);
 
-  // Calculate pay based on payType
-  let basePay = 0;
-  let performanceBonus = 0;
+  const payrollLogs = logsWithVehicles.map((l) => ({
+    startEngineHours: l.startEngineHours,
+    endEngineHours: l.endEngineHours,
+    acresWorked: l.acresWorked,
+    kmTraveled: l.kmTraveled,
+    tripAllowanceOverride: l.tripAllowanceOverride,
+    vehicle: {
+      vehicleId: l.vehicleId,
+      billingModel: l.vehicleBillingModel,
+      operatorRatePerUnit: l.vehicleOperatorRate,
+      tripAllowance: l.vehicleTripAllowance,
+    },
+  }));
 
-  switch (staff.payType) {
-    case "hourly":
-      basePay = totalHours * payRate;
-      break;
-    case "daily":
-      basePay = (logDays - leaveDays) * payRate;
-      break;
-    case "monthly":
-      basePay = payRate; // flat monthly rate
-      break;
-    case "per_acre":
-      // per_acre: base = payRate × acres (performance model)
-      // If there was a fixed basePay we'd add it here; for now it's simple per-acre
-      performanceBonus = totalAcres * payRate;
-      basePay = 0;
-      break;
+  // Calculate period duration for monthly proration
+  const periodStart = new Date(validated.periodStart);
+  const periodEnd = new Date(validated.periodEnd);
+  const periodDays = Math.round((periodEnd.getTime() - periodStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+
+  const breakdown = computePayBreakdown({
+    payType: staff.payType,
+    payRate,
+    logs: payrollLogs,
+    logDays,
+    leaveDays,
+    periodDays,
+  });
+
+  // Spec §2.6: Warn admin about vehicles without configured operatorRatePerUnit
+  if (breakdown.unconfiguredVehicleIds.length > 0) {
+    console.warn(
+      `Payroll for staff ${validated.staffId}: vehicles missing operatorRatePerUnit:`,
+      breakdown.unconfiguredVehicleIds
+    );
   }
 
-  const netPay = Math.max(0, basePay + performanceBonus);
+  // Compute aggregates for display (totalHours, totalAcres, totalKm)
+  const totalHours = payrollLogs.reduce((s, l) =>
+    s + Math.max(0, Number(l.endEngineHours ?? 0) - Number(l.startEngineHours ?? 0)), 0);
+  const totalAcres = payrollLogs.reduce((s, l) => s + Number(l.acresWorked ?? 0), 0);
+  const totalKm = payrollLogs.reduce((s, l) => s + Number(l.kmTraveled ?? 0), 0);
+
+  const netPay = Math.max(0, breakdown.gross);
 
   // Upsert payroll record (one per staff per period)
   const existing = await db
@@ -133,8 +164,10 @@ export async function generatePayroll(data: {
         totalKmTraveled: String(totalKm),
         totalLogDays: logDays,
         leaveDays,
-        basePay: String(basePay),
-        performanceBonus: String(performanceBonus),
+        basePay: String(breakdown.basePay),
+        performanceBonus: String(breakdown.performanceBonus),
+        perUnitBonusTotal: String(breakdown.perUnitBonusTotal),
+        tripAllowanceTotal: String(breakdown.tripAllowanceTotal),
         netPay: String(netPay),
         status: "draft",
         updatedAt: new Date(),
@@ -153,8 +186,10 @@ export async function generatePayroll(data: {
         totalKmTraveled: String(totalKm),
         totalLogDays: logDays,
         leaveDays,
-        basePay: String(basePay),
-        performanceBonus: String(performanceBonus),
+        basePay: String(breakdown.basePay),
+        performanceBonus: String(breakdown.performanceBonus),
+        perUnitBonusTotal: String(breakdown.perUnitBonusTotal),
+        tripAllowanceTotal: String(breakdown.tripAllowanceTotal),
         netPay: String(netPay),
         status: "draft",
       })
@@ -231,6 +266,8 @@ export async function getPayrollList(filters?: {
       leaveDays: payrollPeriods.leaveDays,
       basePay: payrollPeriods.basePay,
       performanceBonus: payrollPeriods.performanceBonus,
+      perUnitBonusTotal: payrollPeriods.perUnitBonusTotal,
+      tripAllowanceTotal: payrollPeriods.tripAllowanceTotal,
       netPay: payrollPeriods.netPay,
       status: payrollPeriods.status,
       createdAt: payrollPeriods.createdAt,

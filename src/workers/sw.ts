@@ -144,6 +144,7 @@ self.addEventListener("push", (event) => {
     body?: string;
     icon?: string;
     tag?: string;
+    url?: string;
   }>() ?? {};
 
   const title = data.title ?? "JPR Alert";
@@ -153,6 +154,7 @@ self.addEventListener("push", (event) => {
     badge: "/icons/icon-72x72.png",
     tag: data.tag ?? "jpr-notification",
     requireInteraction: false,
+    data: { url: data.url ?? "/" },
   };
 
   pushEvent.waitUntil(
@@ -163,15 +165,9 @@ self.addEventListener("push", (event) => {
 self.addEventListener("notificationclick", (event) => {
   const notifEvent = event as unknown as NotificationEventCompat;
   notifEvent.notification.close();
+  const url = notifEvent.notification.data?.url ?? "/";
   notifEvent.waitUntil(
-    (self as unknown as ServiceWorkerGlobalScopeCompat).clients
-      .matchAll({ type: "window", includeUncontrolled: true })
-      .then((windowClients) => {
-        if (windowClients.length > 0) {
-          return windowClients[0].focus();
-        }
-        return (self as unknown as ServiceWorkerGlobalScopeCompat).clients.openWindow("/");
-      })
+    (self as unknown as ServiceWorkerGlobalScopeCompat).clients.openWindow(url)
   );
 });
 

@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, text, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, uuid, varchar, text, timestamp, numeric } from "drizzle-orm/pg-core";
 
 export const companySettings = pgTable("company_settings", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -12,6 +12,9 @@ export const companySettings = pgTable("company_settings", {
   bankBranch: varchar("bank_branch", { length: 200 }),
   logoUrl: varchar("logo_url", { length: 500 }),
   invoiceFooterNote: text("invoice_footer_note"),
+  defaultIdleWarnPct: numeric("default_idle_warn_pct", { precision: 5, scale: 2 }).default("20"),
+  defaultIdleCriticalPct: numeric("default_idle_critical_pct", { precision: 5, scale: 2 }).default("50"),
+  defaultFuelVariancePct: numeric("default_fuel_variance_pct", { precision: 5, scale: 2 }).default("20"),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 

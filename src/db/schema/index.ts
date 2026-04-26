@@ -17,3 +17,4 @@ export * from "./audit-logs";
 export * from "./company-settings";
 export * from "./leaves";
 export * from "./payroll";
+export * from "./alert-events";

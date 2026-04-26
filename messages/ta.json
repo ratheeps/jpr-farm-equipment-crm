@@ -26,7 +26,8 @@
     "notes": "குறிப்புகள்",
     "phone": "தொலைபேசி",
     "name": "பெயர்",
-    "deleteConfirm": "இந்த செயலை மாற்ற முடியாது. நிச்சயமாகவா?"
+    "deleteConfirm": "இந்த செயலை மாற்ற முடியாது. நிச்சயமாகவா?",
+    "exportCsv": "CSV ஏற்றுமதி"
   },
   "auth": {
     "login": "உள்நுழை",
@@ -110,6 +111,12 @@
       "inactive": "செயலற்ற",
       "maintenance": "பராமரிப்பு"
     },
+    "operatorRatePerUnit": "இயக்குநர் கட்டணம் / அலகு",
+    "operatorRatePerHour": "இயக்குநர் கட்டணம் / மணி",
+    "operatorRatePerAcre": "இயக்குநர் கட்டணம் / ஏக்கர்",
+    "operatorRatePerKm": "இயக்குநர் கட்டணம் / கி.மீ",
+    "operatorRatePerTask": "இயக்குநர் கட்டணம் / பணி",
+    "tripAllowance": "பயண கொடுப்பனவு",
     "noVehicles": "வாகனங்கள் இல்லை",
     "noVehiclesDesc": "வாகனத்தை கண்காணிக்க முதல் வாகனத்தை சேர்க்கவும்"
   },
@@ -177,7 +184,8 @@
     "noExpenses": "செலவுகள் பதிவு இல்லை",
     "expenseAdded": "செலவு சேர்க்கப்பட்டது",
     "offlineBanner": "நீங்கள் ஆஃப்லைனில் உள்ளீர்கள் — இணைப்பு வந்தவுடன் ஒத்திசைக்கப்படும்",
-    "onlineRestored": "இணைப்பு வந்தது — ஒத்திசைக்கிறது..."
+    "onlineRestored": "இணைப்பு வந்தது — ஒத்திசைக்கிறது...",
+    "tripAllowanceOverride": "பயண கொடுப்பனவு (மாற்றம்)"
   },
   "expenses": {
     "categories": {
@@ -303,6 +311,7 @@
       "completed": "முடிந்தது",
       "invoiced": "இன்வாய்ஸ் செய்யப்பட்டது"
     },
+    "mobilizationFee": "அணிதிரட்டல் கட்டணம்",
     "noProjects": "திட்டங்கள் இல்லை",
     "noProjectsDesc": "முதல் திட்டத்தை உருவாக்கவும்"
   },
@@ -499,7 +508,12 @@
       "paid": "செலுத்தப்பட்டது",
       "overdue": "தாமதம்",
       "cancelled": "ரத்து செய்யப்பட்டது"
-    }
+    },
+    "generateInvoiceFromLogs": "பதிவுகளிலிருந்து விலைப்பட்டி உருவாக்கு",
+    "noCompletedLogs": "விலைப்பட்டி உருவாக்க முடிவுற்ற பதிவுகள் இல்லை",
+    "shareOnWhatsApp": "WhatsApp இல் பகிர்",
+    "downloadPDF": "PDF பதிவிறக்கு",
+    "uploadFailed": "பதிவேற்றம் தோல்வி. PDF ஐ பதிவிறக்கி கைமுறையாக இணைக்கவும்."
   },
   "vehicleAssignments": {
     "title": "ஆபரேட்டர் நியமனம்",
@@ -572,7 +586,11 @@
       "draft": "வரைவு",
       "finalized": "இறுதிப்படுத்தப்பட்டது",
       "paid": "செலுத்தப்பட்டது"
-    }
+    },
+    "perUnitBonus": "அலகு வெகுமதி",
+    "payBreakdown": "சம்பள விவரம்",
+    "unconfiguredVehicleWarning": "சில வாகனங்களுக்கு இயக்குநர் கட்டணம் அமைக்கப்படவில்லை",
+    "payrollReset": "சம்பள காலம் வரைவுக்கு மீட்டமைக்கப்பட்டது — மீண்டும் கணக்கிடுக"
   },
   "performance": {
     "title": "பணியாளர் செயல்திறன்",
@@ -592,7 +610,17 @@
     "idling": "{idleRatio}% செயலற்ற விகிதம் — {hours} மணி உற்பத்தியற்றது",
     "fuelOver": "எரிபொருள் {pct}% அதிகமாக பதிவு செய்யப்பட்டது ({liters}L)",
     "fuelUnder": "எரிபொருள் {pct}% குறைவாக பதிவு செய்யப்பட்டது ({liters}L)",
-    "maintenanceOverdue": "{count, plural, one {# சேவை தாமதமானது} other {# சேவைகள் தாமதமானது}}: {types}"
+    "maintenanceOverdue": "{count, plural, one {# சேவை தாமதமானது} other {# சேவைகள் தாமதமானது}}: {types}",
+    "defaultIdleWarnPct": "செயலற்ற எச்சரிக்கை வரம்பு (%)",
+    "defaultIdleCriticalPct": "செயலற்ற முக்கிய வரம்பு (%)",
+    "defaultFuelVariancePct": "எரிபொருள் மாறுபாடு வரம்பு (%)",
+    "alertThresholds": "எச்சரிக்கை வரம்புகள்",
+    "rescanNow": "இப்போது மறுபரிசோதனை",
+    "criticalAlerts": "முக்கிய எச்சரிக்கைகள்",
+    "dailyDigest": "தினசரி சுருக்கம்",
+    "enablePushNotifications": "புஷ் அறிவிப்புகளை இயக்கு",
+    "notificationPreferences": "அறிவிப்பு விருப்பங்கள்",
+    "unsubscribe": "சந்தா நீக்கு"
   },
   "dashboard": {
     "fleetPositions": "வாகன நிலைகள்",
@@ -600,5 +628,17 @@
     "assetCostsDesc": "ஒவ்வொரு வாகனத்தின் மொத்த பதிவு செலவுகள்",
     "farmRoi": "பண்ணை முதலீட்டு வருவாய்",
     "farmRoiDesc": "செயல்பாட்டில் உள்ள ஒவ்வொரு பண்ணையின் முதலீட்டு வருவாய்"
+  },
+  "dailyLogs": {
+    "adminLogs": "தினசரி பதிவுகள்",
+    "filterLogs": "பதிவுகளை வடிகட்டு",
+    "editLog": "பதிவைத் திருத்து",
+    "logEdited": "பதிவு வெற்றிகரமாக புதுப்பிக்கப்பட்டது",
+    "fieldNotEditable": "இந்த புலத்தை திருத்த முடியாது",
+    "dateFrom": "தொடக்க தேதி",
+    "dateTo": "முடிவு தேதி",
+    "syncStatus": "ஒத்திசைவு நிலை",
+    "applyFilters": "பொருத்து",
+    "resetFilters": "மீட்டமை"
   }
 }
