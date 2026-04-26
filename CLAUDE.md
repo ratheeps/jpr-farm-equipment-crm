@@ -26,7 +26,9 @@ No test runner is configured yet.
 ## Environment Setup
 
 Copy `.env.example` to `.env.local`. Required variables:
-- `DATABASE_URL` — PostgreSQL connection string
+- `DATABASE_URL` — runtime app pool (role `jpr_app`, NOSUPERUSER NOBYPASSRLS)
+- `MIGRATION_DATABASE_URL` — DDL/seed pool (role `jpr_migrator`, BYPASSRLS). Falls back to `DATABASE_URL` only when `NODE_ENV !== 'production'`.
+- `SYSTEM_USER_ID` — UUID of the seeded `system@internal` user, used by cron/background jobs to set RLS session context. Required in production.
 - `JWT_SECRET` — Minimum 32 characters
 - `STORAGE_*` — S3-compatible storage (MinIO locally, or AWS S3/R2 in prod)
 

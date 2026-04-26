@@ -9,7 +9,15 @@ import { eq } from "drizzle-orm";
 import * as schema from "./schema";
 import { hashPassword } from "../lib/auth/password";
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL! });
+const databaseUrl =
+  process.env.MIGRATION_DATABASE_URL ?? process.env.DATABASE_URL;
+if (!databaseUrl) {
+  throw new Error(
+    "Missing MIGRATION_DATABASE_URL or DATABASE_URL for seeding"
+  );
+}
+
+const pool = new Pool({ connectionString: databaseUrl });
 const db = drizzle(pool, { schema });
 
 async function seed() {
