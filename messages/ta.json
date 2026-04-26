@@ -77,7 +77,9 @@
     "leave": "விடுப்பு கோரிக்கை",
     "auditorFinance": "நிதி",
     "loans": "Loans",
-    "receivables": "Receivables"
+    "receivables": "Receivables",
+    "notifications": "Notifications",
+    "cashTransactions": "Cash Transactions"
   },
   "vehicles": {
     "title": "வாகனங்கள்",

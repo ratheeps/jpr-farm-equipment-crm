@@ -10,8 +10,7 @@ export default async function FinanceLayout({
 }) {
   const session = await getSession();
   const { locale } = await params;
-  if (!session) redirect(`/${locale}/login`);
-  if (!["finance", "admin", "super_admin"].includes(session.role)) {
+  if (!session || !["finance", "admin", "super_admin"].includes(session.role)) {
     redirect(`/${locale}`);
   }
   return <>{children}</>;
