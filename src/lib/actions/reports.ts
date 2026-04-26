@@ -15,9 +15,11 @@ import {
   farmInputs,
   farmHarvests,
   users,
+  companySettings,
 } from "@/db/schema";
 import { requireSession, isRole } from "@/lib/auth/session";
 import { eq, isNotNull, sql, not, and, desc, gte, lte } from "drizzle-orm";
+import { resolveThreshold } from "@/lib/alerts/thresholds";
 
 // ─── Fuel Efficiency Report ──────────────────────────────────────────────────
 
@@ -705,16 +707,31 @@ export async function getExpenseAlerts(): Promise<ExpenseAlert[]> {
     throw new Error("Forbidden");
   }
 
-  const [idlingRows, fuelRows, maintenanceRows] = await Promise.all([
+  const [idlingRows, fuelRows, maintenanceRows, settingsResult, vehicleThresholds] = await Promise.all([
     getIdlingReport(),
     getFuelDiscrepancyReport(),
     getMaintenanceStatusReport(),
+    db.select().from(companySettings).limit(1),
+    db.select({
+      id: vehicles.id,
+      idleCriticalPct: vehicles.idleCriticalPct,
+      idleWarnPct: vehicles.idleWarnPct,
+      fuelVariancePct: vehicles.fuelVariancePct,
+    }).from(vehicles),
   ]);
+
+  const defaults = settingsResult[0] || null;
+  const vehicleMap = new Map(vehicleThresholds.map(v => [v.id, v]));
 
   const alerts: ExpenseAlert[] = [];
 
   for (const row of idlingRows) {
-    if (row.idleRatioPct >= 50) {
+    const vehicle = vehicleMap.get(row.vehicleId);
+    if (!vehicle) continue;
+    const criticalThreshold = resolveThreshold(vehicle, defaults, "idleCriticalPct");
+    const warnThreshold = resolveThreshold(vehicle, defaults, "idleWarnPct");
+
+    if (row.idleRatioPct >= criticalThreshold) {
       alerts.push({
         type: "idling",
         severity: "critical",
@@ -723,7 +740,7 @@ export async function getExpenseAlerts(): Promise<ExpenseAlert[]> {
         idleRatio: row.idleRatioPct,
         hours: row.nonProductiveEngineHours,
       });
-    } else if (row.idleRatioPct >= 20) {
+    } else if (row.idleRatioPct >= warnThreshold) {
       alerts.push({
         type: "idling",
         severity: "warning",
@@ -737,11 +754,14 @@ export async function getExpenseAlerts(): Promise<ExpenseAlert[]> {
 
   for (const row of fuelRows) {
     if (!row.flagged) continue;
+    const vehicle = vehicleMap.get(row.vehicleId);
+    if (!vehicle) continue;
+    const fuelThreshold = resolveThreshold(vehicle, defaults, "fuelVariancePct");
     const pct = row.discrepancyPct ?? 0;
     const positive = pct > 0;
     alerts.push({
       type: "fuel_anomaly",
-      severity: Math.abs(pct) >= 50 ? "critical" : "warning",
+      severity: Math.abs(pct) >= fuelThreshold ? "critical" : "warning",
       vehicleName: row.vehicleName,
       value: pct,
       pct: Math.abs(pct),

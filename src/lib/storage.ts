@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 const endpoint = process.env.STORAGE_ENDPOINT;
@@ -44,4 +44,37 @@ export function getPublicUrl(key: string): string {
   // Strip trailing slash from endpoint and compose URL
   const base = endpoint!.replace(/\/$/, "");
   return `${base}/${bucket}/${key}`;
+}
+
+/**
+ * Generates a presigned GET URL for downloading a file.
+ * Default expiry: 7 days.
+ */
+export async function getPresignedDownloadUrl(
+  key: string,
+  expiresInSeconds = 7 * 24 * 60 * 60
+): Promise<string> {
+  const command = new GetObjectCommand({
+    Bucket: bucket,
+    Key: key,
+  });
+  return getSignedUrl(s3, command, { expiresIn: expiresInSeconds });
+}
+
+/**
+ * Uploads a buffer directly to S3 (server-side upload, not presigned).
+ */
+export async function uploadBuffer(
+  key: string,
+  body: Buffer | Uint8Array,
+  contentType: string
+): Promise<void> {
+  await s3.send(
+    new PutObjectCommand({
+      Bucket: bucket,
+      Key: key,
+      Body: body,
+      ContentType: contentType,
+    })
+  );
 }

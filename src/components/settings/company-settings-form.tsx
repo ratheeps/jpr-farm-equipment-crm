@@ -28,6 +28,9 @@ export function CompanySettingsForm({ settings }: Props) {
       bankAccountNumber: fd.get("bankAccountNumber") as string,
       bankBranch: fd.get("bankBranch") as string,
       invoiceFooterNote: fd.get("invoiceFooterNote") as string,
+      defaultIdleWarnPct: fd.get("defaultIdleWarnPct") as string,
+      defaultIdleCriticalPct: fd.get("defaultIdleCriticalPct") as string,
+      defaultFuelVariancePct: fd.get("defaultFuelVariancePct") as string,
     };
     startTransition(async () => {
       try {
@@ -53,6 +56,11 @@ export function CompanySettingsForm({ settings }: Props) {
       <Field name="bankBranch" label="Branch" defaultValue={settings?.bankBranch ?? ""} />
 
       <Field name="invoiceFooterNote" label="Invoice Footer Note" textarea defaultValue={settings?.invoiceFooterNote ?? ""} />
+
+      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider pt-2">Alert Thresholds</p>
+      <Field name="defaultIdleWarnPct" label="Idle Warning Threshold (%)" type="number" defaultValue={settings?.defaultIdleWarnPct ?? "20"} />
+      <Field name="defaultIdleCriticalPct" label="Idle Critical Threshold (%)" type="number" defaultValue={settings?.defaultIdleCriticalPct ?? "50"} />
+      <Field name="defaultFuelVariancePct" label="Fuel Variance Threshold (%)" type="number" defaultValue={settings?.defaultFuelVariancePct ?? "20"} />
 
       {error && <p className="text-sm text-destructive">{error}</p>}
       {success && <p className="text-sm text-green-600">Settings saved.</p>}

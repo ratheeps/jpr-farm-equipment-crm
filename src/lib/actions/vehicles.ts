@@ -17,11 +17,16 @@ export type VehicleFormData = {
   ratePerAcre?: string;
   ratePerKm?: string;
   ratePerTask?: string;
+  operatorRatePerUnit?: string;
+  tripAllowance?: string;
   fuelConsumptionBaseline?: string;
   maintenanceIntervalHours?: number;
   currentEngineHours?: string;
   status: string;
   notes?: string;
+  idleWarnPct?: string;
+  idleCriticalPct?: string;
+  fuelVariancePct?: string;
 };
 
 export async function createVehicle(data: VehicleFormData) {
@@ -41,11 +46,16 @@ export async function createVehicle(data: VehicleFormData) {
     ratePerAcre: validated.ratePerAcre ?? null,
     ratePerKm: validated.ratePerKm ?? null,
     ratePerTask: validated.ratePerTask ?? null,
+    operatorRatePerUnit: validated.operatorRatePerUnit ?? null,
+    tripAllowance: validated.tripAllowance ?? null,
     fuelConsumptionBaseline: validated.fuelConsumptionBaseline ?? null,
     maintenanceIntervalHours: validated.maintenanceIntervalHours ?? 250,
     currentEngineHours: validated.currentEngineHours ?? "0",
     status: validated.status as never,
     notes: validated.notes ?? null,
+    idleWarnPct: data.idleWarnPct || null,
+    idleCriticalPct: data.idleCriticalPct || null,
+    fuelVariancePct: data.fuelVariancePct || null,
   });
 
   await logAudit("create", "vehicles", validated.name, session.userId, undefined, validated as Record<string, unknown>);
@@ -60,6 +70,8 @@ export async function updateVehicle(id: string, data: VehicleFormData) {
     throw new Error("Forbidden");
   }
 
+  const validated = validateVehicle(data);
+
   await db
     .update(vehicles)
     .set({
@@ -67,15 +79,20 @@ export async function updateVehicle(id: string, data: VehicleFormData) {
       registrationNumber: data.registrationNumber || null,
       vehicleType: data.vehicleType as never,
       billingModel: data.billingModel as never,
-      ratePerHour: data.ratePerHour || null,
-      ratePerAcre: data.ratePerAcre || null,
-      ratePerKm: data.ratePerKm || null,
-      ratePerTask: data.ratePerTask || null,
+      ratePerHour: validated.ratePerHour ?? null,
+      ratePerAcre: validated.ratePerAcre ?? null,
+      ratePerKm: validated.ratePerKm ?? null,
+      ratePerTask: validated.ratePerTask ?? null,
+      operatorRatePerUnit: validated.operatorRatePerUnit ?? null,
+      tripAllowance: validated.tripAllowance ?? null,
       fuelConsumptionBaseline: data.fuelConsumptionBaseline || null,
       maintenanceIntervalHours: data.maintenanceIntervalHours ?? 250,
       currentEngineHours: data.currentEngineHours || "0",
       status: data.status as never,
       notes: data.notes || null,
+      idleWarnPct: data.idleWarnPct || null,
+      idleCriticalPct: data.idleCriticalPct || null,
+      fuelVariancePct: data.fuelVariancePct || null,
       updatedAt: new Date(),
     })
     .where(eq(vehicles.id, id));

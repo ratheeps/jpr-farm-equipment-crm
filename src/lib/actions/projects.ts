@@ -5,6 +5,7 @@ import { projects, projectAssignments, vehicles, staffProfiles } from "@/db/sche
 import { requireSession, isRole } from "@/lib/auth/session";
 import { eq, and, desc, count } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { validateProject } from "@/lib/validations";
 
 export type ProjectFormData = {
   name: string;
@@ -14,6 +15,7 @@ export type ProjectFormData = {
   status: string;
   estimatedHours?: string;
   estimatedCost?: string;
+  mobilizationFee?: string;
   startDate?: string;
   endDate?: string;
   notes?: string;
@@ -25,16 +27,19 @@ export async function createProject(data: ProjectFormData) {
     throw new Error("Forbidden");
   }
 
+  const validated = validateProject(data);
+
   await db.insert(projects).values({
-    name: data.name,
+    name: validated.name,
     clientName: data.clientName,
     clientPhone: data.clientPhone || null,
     siteLocationText: data.siteLocationText || null,
-    status: data.status as never,
-    estimatedHours: data.estimatedHours || null,
-    estimatedCost: data.estimatedCost || null,
-    startDate: data.startDate || null,
-    endDate: data.endDate || null,
+    status: validated.status as never,
+    estimatedHours: validated.estimatedHours ?? null,
+    estimatedCost: validated.estimatedCost ?? null,
+    mobilizationFee: validated.mobilizationFee ?? null,
+    startDate: validated.startDate ?? null,
+    endDate: validated.endDate ?? null,
     notes: data.notes || null,
   });
 
@@ -48,18 +53,21 @@ export async function updateProject(id: string, data: ProjectFormData) {
     throw new Error("Forbidden");
   }
 
+  const validated = validateProject(data);
+
   await db
     .update(projects)
     .set({
-      name: data.name,
+      name: validated.name,
       clientName: data.clientName,
       clientPhone: data.clientPhone || null,
       siteLocationText: data.siteLocationText || null,
-      status: data.status as never,
-      estimatedHours: data.estimatedHours || null,
-      estimatedCost: data.estimatedCost || null,
-      startDate: data.startDate || null,
-      endDate: data.endDate || null,
+      status: validated.status as never,
+      estimatedHours: validated.estimatedHours ?? null,
+      estimatedCost: validated.estimatedCost ?? null,
+      mobilizationFee: validated.mobilizationFee ?? null,
+      startDate: validated.startDate ?? null,
+      endDate: validated.endDate ?? null,
       notes: data.notes || null,
       updatedAt: new Date(),
     })

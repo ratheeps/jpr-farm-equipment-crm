@@ -14,6 +14,7 @@ interface Vehicle {
   vehicleType: string;
   billingModel: string;
   currentEngineHours: string | null;
+  tripAllowance?: string | null;
 }
 
 interface Project {
@@ -96,6 +97,7 @@ export function LogWorkCard({ todayLog, vehicles, projects, assignedVehicleId, c
   const [fuel, setFuel] = useState("");
   const [km, setKm] = useState("");
   const [acres, setAcres] = useState("");
+  const [tripOverride, setTripOverride] = useState("");
   const [endNotes, setEndNotes] = useState("");
   const [endError, setEndError] = useState("");
 
@@ -198,6 +200,7 @@ export function LogWorkCard({ todayLog, vehicles, projects, assignedVehicleId, c
             fuelUsedLiters: fuel || undefined,
             kmTraveled: km || undefined,
             acresWorked: acres || undefined,
+            tripAllowanceOverride: tripOverride || undefined,
             gpsLatEnd: coords?.lat,
             gpsLngEnd: coords?.lng,
             notes: endNotes || undefined,
@@ -352,6 +355,22 @@ export function LogWorkCard({ todayLog, vehicles, projects, assignedVehicleId, c
             </div>
           )}
 
+          {activeLog.billingModel === "per_km" && (
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">
+                {t("tripAllowanceOverride")}
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                value={tripOverride}
+                onChange={(e) => setTripOverride(e.target.value)}
+                placeholder={selectedVehicle && 'tripAllowance' in selectedVehicle ? `Default: ${(selectedVehicle as Vehicle).tripAllowance ?? "0"}` : "0.00"}
+                className="w-full h-12 rounded-xl border border-input bg-background px-4 text-base focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+          )}
+
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">
               {tc("notes")}
@@ -479,7 +498,7 @@ function CompletedLogsList({
   t,
 }: {
   logs: CompletedLog[];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // eslint-disable-next-line -- next-intl translation function
   t: any;
 }) {
   return (

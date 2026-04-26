@@ -278,7 +278,7 @@ function fmtLKR(value: string | number | null | undefined): string {
   })}LKR`;
 }
 
-function InvoiceDocument({ data, company }: { data: InvoicePDFData; company?: CompanyProfile }) {
+export function InvoiceDocument({ data, company }: { data: InvoicePDFData; company?: CompanyProfile }) {
   const discount  = parseFloat(data.discountAmount ?? "0") || 0;
   const tax       = parseFloat(data.taxAmount ?? "0") || 0;
   const totalPaid = (data.payments ?? []).reduce((s, p) => s + parseFloat(p.amount), 0);
@@ -295,6 +295,7 @@ function InvoiceDocument({ data, company }: { data: InvoicePDFData; company?: Co
 
         {/* ── Header ── */}
         <View style={styles.header}>
+          {/* eslint-disable-next-line jsx-a11y/alt-text -- react-pdf Image has no alt prop */}
           <Image style={styles.logo} src="/logo.png" />
           <View style={styles.headerRight}>
             <Text style={styles.invoiceTitle}>INVOICE</Text>

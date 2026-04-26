@@ -187,6 +187,7 @@ export function validateEndLog(data: {
   gpsLatEnd?: unknown;
   gpsLngEnd?: unknown;
   notes?: unknown;
+  tripAllowanceOverride?: unknown;
 }) {
   return {
     endEngineHours: assertNumericString(data.endEngineHours, "endEngineHours"),
@@ -196,6 +197,7 @@ export function validateEndLog(data: {
     gpsLatEnd: assertOptionalString(data.gpsLatEnd),
     gpsLngEnd: assertOptionalString(data.gpsLngEnd),
     notes: assertOptionalString(data.notes),
+    tripAllowanceOverride: assertOptionalNumericString(data.tripAllowanceOverride),
   };
 }
 
@@ -228,6 +230,8 @@ export function validateVehicle(data: {
   ratePerAcre?: unknown;
   ratePerKm?: unknown;
   ratePerTask?: unknown;
+  operatorRatePerUnit?: unknown;
+  tripAllowance?: unknown;
   fuelConsumptionBaseline?: unknown;
   maintenanceIntervalHours?: unknown;
   currentEngineHours?: unknown;
@@ -243,6 +247,8 @@ export function validateVehicle(data: {
     ratePerAcre: assertOptionalNumericString(data.ratePerAcre),
     ratePerKm: assertOptionalNumericString(data.ratePerKm),
     ratePerTask: assertOptionalNumericString(data.ratePerTask),
+    operatorRatePerUnit: assertOptionalNumericString(data.operatorRatePerUnit),
+    tripAllowance: assertOptionalNumericString(data.tripAllowance),
     fuelConsumptionBaseline: assertOptionalNumericString(
       data.fuelConsumptionBaseline
     ),
@@ -293,6 +299,7 @@ export function validateProject(data: {
   status?: unknown;
   estimatedHours?: unknown;
   estimatedCost?: unknown;
+  mobilizationFee?: unknown;
   startDate?: unknown;
   endDate?: unknown;
   notes?: unknown;
@@ -307,6 +314,7 @@ export function validateProject(data: {
     status: assertEnum(data.status, "status", PROJECT_STATUSES),
     estimatedHours: assertOptionalNumericString(data.estimatedHours),
     estimatedCost: assertOptionalNumericString(data.estimatedCost),
+    mobilizationFee: assertOptionalNumericString(data.mobilizationFee),
     startDate: assertOptionalDate(data.startDate),
     endDate: assertOptionalDate(data.endDate),
     notes: assertOptionalString(data.notes),

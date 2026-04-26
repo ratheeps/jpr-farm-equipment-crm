@@ -134,3 +134,14 @@ export const transactionTypeEnum = pgEnum("transaction_type", [
   "borrowing_in",
   "debt_repayment",
 ]);
+
+export const alertTypeEnum = pgEnum("alert_type", [
+  "idling",
+  "fuel_anomaly",
+  "maintenance_overdue",
+]);
+
+export const alertSeverityEnum = pgEnum("alert_severity", [
+  "warning",
+  "critical",
+]);
