@@ -71,6 +71,13 @@
       "when": 1776505299009,
       "tag": "0009_phase2_alerts_notifications",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1777219072607,
+      "tag": "0010_quick_butterfly",
+      "breakpoints": true
     }
   ]
 }

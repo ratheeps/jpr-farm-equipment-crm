@@ -20,6 +20,7 @@ export const userRoleEnum = pgEnum("user_role", [
   "admin",
   "operator",
   "auditor",
+  "finance",
 ]);
 
 export const localeEnum = pgEnum("locale", ["ta", "si", "en"]);
