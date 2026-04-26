@@ -13,6 +13,8 @@ function getRoleNavKey(role: string): string {
       return "operator";
     case "auditor":
       return "auditor";
+    case "finance":
+      return "finance";
     default:
       return "operator";
   }

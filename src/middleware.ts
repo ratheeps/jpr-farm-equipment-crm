@@ -15,10 +15,11 @@ const publicPaths = ["/login", "/api/auth/login"];
 
 // Role-based route prefixes
 const roleRoutes: Record<string, string[]> = {
-  super_admin: ["/owner", "/admin", "/operator", "/auditor"],
-  admin: ["/admin", "/operator"],
+  super_admin: ["/owner", "/admin", "/operator", "/auditor", "/finance"],
+  admin: ["/admin", "/operator", "/finance"],
   operator: ["/operator"],
   auditor: ["/auditor"],
+  finance: ["/finance"],
 };
 
 export async function middleware(request: NextRequest) {
@@ -95,6 +96,8 @@ function getRoleDashboard(role: string): string {
       return "/operator";
     case "auditor":
       return "/auditor";
+    case "finance":
+      return "/finance";
     default:
       return "/operator";
   }
