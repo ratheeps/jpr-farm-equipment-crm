@@ -58,7 +58,7 @@ export async function createVehicle(data: VehicleFormData) {
     fuelVariancePct: data.fuelVariancePct || null,
   });
 
-  await logAudit("create", "vehicles", validated.name, session.userId, undefined, validated as Record<string, unknown>);
+  await logAudit(null, "create", "vehicles", validated.name, session.userId, undefined, validated as Record<string, unknown>);
 
   revalidatePath("/admin/vehicles");
   revalidatePath("/owner");
@@ -97,7 +97,7 @@ export async function updateVehicle(id: string, data: VehicleFormData) {
     })
     .where(eq(vehicles.id, id));
 
-  await logAudit("update", "vehicles", id, session.userId, undefined, data as unknown as Record<string, unknown>);
+  await logAudit(null, "update", "vehicles", id, session.userId, undefined, data as unknown as Record<string, unknown>);
 
   revalidatePath("/admin/vehicles");
   revalidatePath(`/admin/vehicles/${id}`);
@@ -115,7 +115,7 @@ export async function updateVehicleStatus(
     .update(vehicles)
     .set({ status: status as never, updatedAt: new Date() })
     .where(eq(vehicles.id, id));
-  await logAudit("update", "vehicles", id, session.userId, undefined, { status });
+  await logAudit(null, "update", "vehicles", id, session.userId, undefined, { status });
   revalidatePath("/admin/vehicles");
   revalidatePath(`/admin/vehicles/${id}`);
 }
@@ -127,7 +127,7 @@ export async function deleteVehicle(id: string) {
   }
 
   await db.update(vehicles).set({ status: "inactive" }).where(eq(vehicles.id, id));
-  await logAudit("deactivate", "vehicles", id, session.userId);
+  await logAudit(null, "deactivate", "vehicles", id, session.userId);
   revalidatePath("/admin/vehicles");
 }
 

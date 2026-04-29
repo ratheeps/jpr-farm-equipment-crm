@@ -55,7 +55,7 @@ export async function requestLeave(data: {
     })
     .returning({ id: staffLeaves.id });
 
-  await logAudit("create", "staff_leaves", leave.id, session.userId, undefined, {
+  await logAudit(null, "create", "staff_leaves", leave.id, session.userId, undefined, {
     staffId: targetStaffId,
     leaveType: validated.leaveType,
   });
@@ -77,7 +77,7 @@ export async function approveLeave(leaveId: string) {
     })
     .where(eq(staffLeaves.id, leaveId));
 
-  await logAudit("update", "staff_leaves", leaveId, session.userId);
+  await logAudit(null, "update", "staff_leaves", leaveId, session.userId);
 
   revalidatePath("/admin/staff/leaves");
 }
@@ -95,7 +95,7 @@ export async function rejectLeave(leaveId: string) {
     })
     .where(eq(staffLeaves.id, leaveId));
 
-  await logAudit("update", "staff_leaves", leaveId, session.userId);
+  await logAudit(null, "update", "staff_leaves", leaveId, session.userId);
 
   revalidatePath("/admin/staff/leaves");
 }

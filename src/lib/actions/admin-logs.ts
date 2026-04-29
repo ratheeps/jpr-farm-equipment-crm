@@ -134,7 +134,7 @@ export async function updateLogByAdmin(
         .where(eq(payrollPeriods.id, pp.id));
     }
 
-    await logAudit("update", "daily_logs", logId, session.userId, before as Record<string, unknown>, safePatch);
+    await logAudit(null, "update", "daily_logs", logId, session.userId, before as Record<string, unknown>, safePatch);
 
     return affected;
   });

@@ -197,7 +197,7 @@ export async function generatePayroll(data: {
     payrollId = row.id;
   }
 
-  await logAudit("create", "payroll_periods", payrollId, session.userId, undefined, {
+  await logAudit(null, "create", "payroll_periods", payrollId, session.userId, undefined, {
     staffId: validated.staffId,
     period: `${validated.periodStart} - ${validated.periodEnd}`,
   });

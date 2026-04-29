@@ -2,8 +2,10 @@
 
 import { db } from "@/db";
 import { auditLogs } from "@/db/schema";
+import type { DB } from "@/db";
 
 export async function logAudit(
+  tx: DB | null,
   action: "create" | "update" | "delete" | "deactivate" | "login" | "logout",
   tableName: string,
   recordId: string,
@@ -12,8 +14,9 @@ export async function logAudit(
   newValue?: Record<string, unknown>,
   note?: string
 ) {
+  const client = tx ?? db;
   try {
-    await db.insert(auditLogs).values({
+    await client.insert(auditLogs).values({
       action,
       tableName,
       recordId,

@@ -219,6 +219,7 @@ export async function assignOperatorToVehicle(data: {
     .returning({ id: vehicleAssignments.id });
 
   await logAudit(
+    null,
     "create",
     "vehicle_assignments",
     row.id,
@@ -244,6 +245,7 @@ export async function removeVehicleAssignment(assignmentId: string) {
     .where(eq(vehicleAssignments.id, assignmentId));
 
   await logAudit(
+    null,
     "deactivate",
     "vehicle_assignments",
     assignmentId,

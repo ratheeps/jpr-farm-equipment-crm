@@ -61,7 +61,7 @@ export async function createStaff(data: StaffFormData) {
     payType: validated.payType as never,
   });
 
-  await logAudit("create", "users", user.id, session.userId, undefined, { phone: validated.phone, role: validated.role });
+  await logAudit(null, "create", "users", user.id, session.userId, undefined, { phone: validated.phone, role: validated.role });
 
   revalidatePath("/admin/staff");
 }
@@ -93,7 +93,7 @@ export async function updateStaff(userId: string, data: Omit<StaffFormData, "pas
     })
     .where(eq(staffProfiles.userId, userId));
 
-  await logAudit("update", "users", userId, session.userId);
+  await logAudit(null, "update", "users", userId, session.userId);
 
   revalidatePath("/admin/staff");
 }
@@ -160,7 +160,7 @@ export async function deactivateStaff(userId: string) {
     .set({ isActive: false, updatedAt: new Date() })
     .where(eq(users.id, userId));
 
-  await logAudit("deactivate", "users", userId, session.userId);
+  await logAudit(null, "deactivate", "users", userId, session.userId);
 
   revalidatePath("/admin/staff");
 }
