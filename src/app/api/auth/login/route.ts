@@ -7,6 +7,7 @@ import { COOKIE_NAME } from "@/lib/auth/session";
 import { eq } from "drizzle-orm";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { validateCsrf } from "@/lib/csrf";
+import { isLoginDisabled } from "@/lib/auth/system-user";
 
 export async function POST(request: NextRequest) {
   // CSRF protection
@@ -49,6 +50,14 @@ export async function POST(request: NextRequest) {
       .limit(1);
 
     if (!user || !user.isActive) {
+      return NextResponse.json(
+        { error: "Invalid credentials" },
+        { status: 401 }
+      );
+    }
+
+    if (isLoginDisabled(user)) {
+      // Defense in depth: synthetic system user must never log in via cookie auth.
       return NextResponse.json(
         { error: "Invalid credentials" },
         { status: 401 }

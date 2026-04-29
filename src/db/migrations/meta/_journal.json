@@ -75,8 +75,15 @@
     {
       "idx": 10,
       "version": "7",
-      "when": 1777219072607,
-      "tag": "0010_quick_butterfly",
+      "when": 1777225600000,
+      "tag": "0011_rls_policies",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1777300000000,
+      "tag": "0012_finance_enum",
       "breakpoints": true
     }
   ]

@@ -9,11 +9,51 @@ import { eq } from "drizzle-orm";
 import * as schema from "./schema";
 import { hashPassword } from "../lib/auth/password";
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL! });
+const databaseUrl =
+  process.env.MIGRATION_DATABASE_URL ?? process.env.DATABASE_URL;
+if (!databaseUrl) {
+  throw new Error(
+    "Missing MIGRATION_DATABASE_URL or DATABASE_URL for seeding"
+  );
+}
+
+const pool = new Pool({ connectionString: databaseUrl });
 const db = drizzle(pool, { schema });
 
 async function seed() {
   console.log("Seeding database...");
+
+  // System user — drives cron/background paths under withSystemRLS.
+  // Login is blocked at the handler (see src/lib/auth/system-user.ts) AND by
+  // isActive=false. The passwordHash sentinel "!disabled" is checked by isLoginDisabled.
+  const SYSTEM_PHONE = "system@internal";
+  const SYSTEM_PASSWORD_HASH = "!disabled";
+
+  const existingSystem = await db
+    .select({ id: schema.users.id })
+    .from(schema.users)
+    .where(eq(schema.users.phone, SYSTEM_PHONE))
+    .limit(1);
+
+  let systemUserId: string;
+  if (existingSystem.length === 0) {
+    const inserted = await db
+      .insert(schema.users)
+      .values({
+        phone: SYSTEM_PHONE,
+        passwordHash: SYSTEM_PASSWORD_HASH,
+        role: "super_admin",
+        preferredLocale: "en",
+        isActive: false,
+      })
+      .returning({ id: schema.users.id });
+    systemUserId = inserted[0].id;
+    console.log(`✓ System user created: ${systemUserId}`);
+  } else {
+    systemUserId = existingSystem[0].id;
+    console.log(`✓ System user exists: ${systemUserId}`);
+  }
+  console.log(`Set SYSTEM_USER_ID=${systemUserId} in your .env (required for cron in production)`);
 
   // Super Admin user
   const passwordHash = await hashPassword("admin123");
