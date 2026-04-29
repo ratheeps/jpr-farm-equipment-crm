@@ -1,14 +1,14 @@
 "use server";
 
-import { db } from "@/db";
+import { withRLS, type DB } from "@/db";
 import { expenses, staffProfiles, vehicles } from "@/db/schema";
 import { requireSession } from "@/lib/auth/session";
 import { eq, and, desc } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { validateExpense } from "@/lib/validations";
 
-async function getStaffProfile(userId: string) {
-  const [profile] = await db
+async function getStaffProfile(tx: DB, userId: string) {
+  const [profile] = await tx
     .select()
     .from(staffProfiles)
     .where(eq(staffProfiles.userId, userId));
@@ -28,8 +28,6 @@ export async function createExpense(data: {
   gpsLng?: string;
 }) {
   const session = await requireSession();
-  const profile = await getStaffProfile(session.userId);
-  if (!profile) throw new Error("No staff profile");
 
   // Misc category requires description
   if (data.category === "misc" && !data.description?.trim()) {
@@ -42,19 +40,24 @@ export async function createExpense(data: {
 
   const validated = validateExpense(data);
 
-  await db.insert(expenses).values({
-    vehicleId: validated.vehicleId ?? null,
-    projectId: validated.projectId ?? null,
-    dailyLogId: validated.dailyLogId ?? null,
-    staffId: profile.id,
-    createdBy: session.userId,
-    category: validated.category as never,
-    amount: validated.amount,
-    description: validated.description ?? null,
-    date: validated.date,
-    receiptImageUrl: data.receiptImageUrl ?? null,
-    gpsLat: data.gpsLat ?? null,
-    gpsLng: data.gpsLng ?? null,
+  await withRLS(session.userId, session.role, async (tx: DB) => {
+    const profile = await getStaffProfile(tx, session.userId);
+    if (!profile) throw new Error("No staff profile");
+
+    await tx.insert(expenses).values({
+      vehicleId: validated.vehicleId ?? null,
+      projectId: validated.projectId ?? null,
+      dailyLogId: validated.dailyLogId ?? null,
+      staffId: profile.id,
+      createdBy: session.userId,
+      category: validated.category as never,
+      amount: validated.amount,
+      description: validated.description ?? null,
+      date: validated.date,
+      receiptImageUrl: data.receiptImageUrl ?? null,
+      gpsLat: data.gpsLat ?? null,
+      gpsLng: data.gpsLng ?? null,
+    });
   });
 
   revalidatePath("/operator/expenses");
@@ -62,22 +65,25 @@ export async function createExpense(data: {
 
 export async function getMyExpenses(limit = 30) {
   const session = await requireSession();
-  const profile = await getStaffProfile(session.userId);
-  if (!profile) return [];
 
-  return db
-    .select({
-      id: expenses.id,
-      date: expenses.date,
-      category: expenses.category,
-      amount: expenses.amount,
-      description: expenses.description,
-      syncStatus: expenses.syncStatus,
-      vehicleName: vehicles.name,
-    })
-    .from(expenses)
-    .leftJoin(vehicles, eq(expenses.vehicleId, vehicles.id))
-    .where(eq(expenses.staffId, profile.id))
-    .orderBy(desc(expenses.date))
-    .limit(limit);
+  return withRLS(session.userId, session.role, async (tx: DB) => {
+    const profile = await getStaffProfile(tx, session.userId);
+    if (!profile) return [];
+
+    return tx
+      .select({
+        id: expenses.id,
+        date: expenses.date,
+        category: expenses.category,
+        amount: expenses.amount,
+        description: expenses.description,
+        syncStatus: expenses.syncStatus,
+        vehicleName: vehicles.name,
+      })
+      .from(expenses)
+      .leftJoin(vehicles, eq(expenses.vehicleId, vehicles.id))
+      .where(eq(expenses.staffId, profile.id))
+      .orderBy(desc(expenses.date))
+      .limit(limit);
+  });
 }
