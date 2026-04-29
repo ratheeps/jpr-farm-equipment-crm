@@ -1,21 +1,21 @@
 "use server";
 
-import { db } from "@/db";
+import { withRLS } from "@/db";
 import { projects, dailyLogs, vehicles, invoices, invoiceItems } from "@/db/schema";
 import { requireSession, isRole } from "@/lib/auth/session";
-import { generateInvoiceNumber } from "@/lib/actions/invoices";
+import { nextInvoiceNumberTx } from "@/lib/actions/invoices";
 import { eq, and, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { buildInvoiceLineItems, type InvoiceLogRow } from "@/lib/invoice-line-items";
 
-// Reuse existing generateInvoiceNumber from src/lib/actions/invoices.ts (line 264)
-// Do NOT create a separate nextInvoiceNumber — that would cause numbering collisions.
+// Reuse nextInvoiceNumberTx from src/lib/actions/invoices.ts so the COUNT(*)
+// runs inside the same withRLS transaction, preventing numbering collisions.
 
 export async function generateFromProject(projectId: string) {
   const session = await requireSession();
   if (!isRole(session, "super_admin", "admin")) throw new Error("Forbidden");
 
-  return await db.transaction(async (tx) => {
+  return await withRLS(session.userId, session.role, async (tx) => {
     // Row lock on project to prevent concurrent double-bill
     // Note: Drizzle does not support .for("update") — use raw SQL for SELECT...FOR UPDATE
     // IMPORTANT: raw SQL returns snake_case column names — access with snake_case below
@@ -77,7 +77,7 @@ export async function generateFromProject(projectId: string) {
     const items = buildInvoiceLineItems(preamble, logRows as InvoiceLogRow[]);
     const subtotal = items.reduce((s, i) => s + Number(i.amount), 0);
 
-    const invoiceNumber = await generateInvoiceNumber();
+    const invoiceNumber = await nextInvoiceNumberTx(tx);
 
     const [invoice] = await tx
       .insert(invoices)

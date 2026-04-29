@@ -1,6 +1,6 @@
 "use server";
 
-import { db } from "@/db";
+import { withRLS, type DB } from "@/db";
 import { quotes, quoteItems, invoices, invoiceItems, projects } from "@/db/schema";
 import { requireSession, isRole } from "@/lib/auth/session";
 import { eq, desc, count } from "drizzle-orm";
@@ -27,53 +27,19 @@ export type QuoteFormData = {
   items: QuoteItemData[];
 };
 
-async function nextQuoteNumber(): Promise<string> {
+async function nextQuoteNumber(tx: DB): Promise<string> {
   const now = new Date();
   const ym = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}`;
-  const [{ total }] = await db.select({ total: count() }).from(quotes);
+  const [{ total }] = await tx.select({ total: count() }).from(quotes);
   const seq = String(Number(total) + 1).padStart(3, "0");
   return `QUO-${ym}-${seq}`;
 }
 
-export async function generateQuoteNumber() {
-  const session = await requireSession();
-  if (!isRole(session, "super_admin", "admin")) {
-    throw new Error("Forbidden");
-  }
-  return nextQuoteNumber();
-}
-
-export async function getQuotes() {
-  const session = await requireSession();
-  if (!isRole(session, "super_admin", "admin", "auditor")) {
-    throw new Error("Forbidden");
-  }
-
-  return db
-    .select({
-      id: quotes.id,
-      quoteNumber: quotes.quoteNumber,
-      clientName: quotes.clientName,
-      total: quotes.total,
-      validUntil: quotes.validUntil,
-      createdAt: quotes.createdAt,
-      projectName: projects.name,
-    })
-    .from(quotes)
-    .leftJoin(projects, eq(quotes.projectId, projects.id))
-    .orderBy(desc(quotes.createdAt));
-}
-
-export async function getQuote(id: string) {
-  const session = await requireSession();
-  if (!isRole(session, "super_admin", "admin", "auditor")) {
-    throw new Error("Forbidden");
-  }
-
-  const [quote] = await db.select().from(quotes).where(eq(quotes.id, id));
+async function getQuoteTx(tx: DB, id: string) {
+  const [quote] = await tx.select().from(quotes).where(eq(quotes.id, id));
   if (!quote) return null;
 
-  const items = await db
+  const items = await tx
     .select()
     .from(quoteItems)
     .where(eq(quoteItems.quoteId, id))
@@ -82,42 +48,88 @@ export async function getQuote(id: string) {
   return { quote, items };
 }
 
+export async function generateQuoteNumber() {
+  const session = await requireSession();
+  if (!isRole(session, "super_admin", "admin")) {
+    throw new Error("Forbidden");
+  }
+  return withRLS(session.userId, session.role, async (tx) => {
+    return nextQuoteNumber(tx);
+  });
+}
+
+export async function getQuotes() {
+  const session = await requireSession();
+  if (!isRole(session, "super_admin", "admin", "auditor")) {
+    throw new Error("Forbidden");
+  }
+
+  return withRLS(session.userId, session.role, async (tx) => {
+    return tx
+      .select({
+        id: quotes.id,
+        quoteNumber: quotes.quoteNumber,
+        clientName: quotes.clientName,
+        total: quotes.total,
+        validUntil: quotes.validUntil,
+        createdAt: quotes.createdAt,
+        projectName: projects.name,
+      })
+      .from(quotes)
+      .leftJoin(projects, eq(quotes.projectId, projects.id))
+      .orderBy(desc(quotes.createdAt));
+  });
+}
+
+export async function getQuote(id: string) {
+  const session = await requireSession();
+  if (!isRole(session, "super_admin", "admin", "auditor")) {
+    throw new Error("Forbidden");
+  }
+
+  return withRLS(session.userId, session.role, async (tx) => {
+    return getQuoteTx(tx, id);
+  });
+}
+
 export async function createQuote(data: QuoteFormData) {
   const session = await requireSession();
   if (!isRole(session, "super_admin", "admin")) {
     throw new Error("Forbidden");
   }
 
-  const [quote] = await db
-    .insert(quotes)
-    .values({
-      quoteNumber: data.quoteNumber,
-      projectId: data.projectId || null,
-      clientName: data.clientName,
-      clientPhone: data.clientPhone || null,
-      subtotal: data.subtotal,
-      total: data.total,
-      validUntil: data.validUntil || null,
-      notes: data.notes || null,
-    })
-    .returning({ id: quotes.id });
+  return withRLS(session.userId, session.role, async (tx) => {
+    const [quote] = await tx
+      .insert(quotes)
+      .values({
+        quoteNumber: data.quoteNumber,
+        projectId: data.projectId || null,
+        clientName: data.clientName,
+        clientPhone: data.clientPhone || null,
+        subtotal: data.subtotal,
+        total: data.total,
+        validUntil: data.validUntil || null,
+        notes: data.notes || null,
+      })
+      .returning({ id: quotes.id });
 
-  if (data.items.length > 0) {
-    await db.insert(quoteItems).values(
-      data.items.map((item, idx) => ({
-        quoteId: quote.id,
-        description: item.description,
-        quantity: item.quantity,
-        unit: item.unit || null,
-        rate: item.rate,
-        amount: item.amount,
-        sortOrder: idx,
-      }))
-    );
-  }
+    if (data.items.length > 0) {
+      await tx.insert(quoteItems).values(
+        data.items.map((item, idx) => ({
+          quoteId: quote.id,
+          description: item.description,
+          quantity: item.quantity,
+          unit: item.unit || null,
+          rate: item.rate,
+          amount: item.amount,
+          sortOrder: idx,
+        }))
+      );
+    }
 
-  revalidatePath("/admin/quotes");
-  return quote.id;
+    revalidatePath("/admin/quotes");
+    return quote.id;
+  });
 }
 
 export async function updateQuote(id: string, data: QuoteFormData) {
@@ -126,38 +138,40 @@ export async function updateQuote(id: string, data: QuoteFormData) {
     throw new Error("Forbidden");
   }
 
-  await db
-    .update(quotes)
-    .set({
-      projectId: data.projectId || null,
-      clientName: data.clientName,
-      clientPhone: data.clientPhone || null,
-      subtotal: data.subtotal,
-      total: data.total,
-      validUntil: data.validUntil || null,
-      notes: data.notes || null,
-      updatedAt: new Date(),
-    })
-    .where(eq(quotes.id, id));
+  return withRLS(session.userId, session.role, async (tx) => {
+    await tx
+      .update(quotes)
+      .set({
+        projectId: data.projectId || null,
+        clientName: data.clientName,
+        clientPhone: data.clientPhone || null,
+        subtotal: data.subtotal,
+        total: data.total,
+        validUntil: data.validUntil || null,
+        notes: data.notes || null,
+        updatedAt: new Date(),
+      })
+      .where(eq(quotes.id, id));
 
-  await db.delete(quoteItems).where(eq(quoteItems.quoteId, id));
+    await tx.delete(quoteItems).where(eq(quoteItems.quoteId, id));
 
-  if (data.items.length > 0) {
-    await db.insert(quoteItems).values(
-      data.items.map((item, idx) => ({
-        quoteId: id,
-        description: item.description,
-        quantity: item.quantity,
-        unit: item.unit || null,
-        rate: item.rate,
-        amount: item.amount,
-        sortOrder: idx,
-      }))
-    );
-  }
+    if (data.items.length > 0) {
+      await tx.insert(quoteItems).values(
+        data.items.map((item, idx) => ({
+          quoteId: id,
+          description: item.description,
+          quantity: item.quantity,
+          unit: item.unit || null,
+          rate: item.rate,
+          amount: item.amount,
+          sortOrder: idx,
+        }))
+      );
+    }
 
-  revalidatePath("/admin/quotes");
-  revalidatePath(`/admin/quotes/${id}`);
+    revalidatePath("/admin/quotes");
+    revalidatePath(`/admin/quotes/${id}`);
+  });
 }
 
 export async function deleteQuote(id: string) {
@@ -166,8 +180,10 @@ export async function deleteQuote(id: string) {
     throw new Error("Forbidden");
   }
 
-  await db.delete(quotes).where(eq(quotes.id, id));
-  revalidatePath("/admin/quotes");
+  return withRLS(session.userId, session.role, async (tx) => {
+    await tx.delete(quotes).where(eq(quotes.id, id));
+    revalidatePath("/admin/quotes");
+  });
 }
 
 export async function convertQuoteToInvoice(quoteId: string): Promise<string> {
@@ -176,48 +192,50 @@ export async function convertQuoteToInvoice(quoteId: string): Promise<string> {
     throw new Error("Forbidden");
   }
 
-  const result = await getQuote(quoteId);
-  if (!result) throw new Error("Quote not found");
+  return withRLS(session.userId, session.role, async (tx) => {
+    const result = await getQuoteTx(tx, quoteId);
+    if (!result) throw new Error("Quote not found");
 
-  const { quote, items } = result;
+    const { quote, items } = result;
 
-  // Generate invoice number
-  const now = new Date();
-  const ym = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}`;
-  const [{ total: invCount }] = await db.select({ total: count() }).from(invoices);
-  const seq = String(Number(invCount) + 1).padStart(3, "0");
-  const invoiceNumber = `INV-${ym}-${seq}`;
+    // Generate invoice number
+    const now = new Date();
+    const ym = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}`;
+    const [{ total: invCount }] = await tx.select({ total: count() }).from(invoices);
+    const seq = String(Number(invCount) + 1).padStart(3, "0");
+    const invoiceNumber = `INV-${ym}-${seq}`;
 
-  const [invoice] = await db
-    .insert(invoices)
-    .values({
-      invoiceNumber,
-      projectId: quote.projectId,
-      clientName: quote.clientName,
-      clientPhone: quote.clientPhone,
-      subtotal: quote.subtotal,
-      discountAmount: "0",
-      taxAmount: "0",
-      total: quote.total,
-      status: "draft",
-      notes: quote.notes,
-    })
-    .returning({ id: invoices.id });
+    const [invoice] = await tx
+      .insert(invoices)
+      .values({
+        invoiceNumber,
+        projectId: quote.projectId,
+        clientName: quote.clientName,
+        clientPhone: quote.clientPhone,
+        subtotal: quote.subtotal,
+        discountAmount: "0",
+        taxAmount: "0",
+        total: quote.total,
+        status: "draft",
+        notes: quote.notes,
+      })
+      .returning({ id: invoices.id });
 
-  if (items.length > 0) {
-    await db.insert(invoiceItems).values(
-      items.map((item, idx) => ({
-        invoiceId: invoice.id,
-        description: item.description,
-        quantity: item.quantity,
-        unit: item.unit,
-        rate: item.rate,
-        amount: item.amount,
-        sortOrder: idx,
-      }))
-    );
-  }
+    if (items.length > 0) {
+      await tx.insert(invoiceItems).values(
+        items.map((item, idx) => ({
+          invoiceId: invoice.id,
+          description: item.description,
+          quantity: item.quantity,
+          unit: item.unit,
+          rate: item.rate,
+          amount: item.amount,
+          sortOrder: idx,
+        }))
+      );
+    }
 
-  revalidatePath("/admin/invoices");
-  return invoice.id;
+    revalidatePath("/admin/invoices");
+    return invoice.id;
+  });
 }
