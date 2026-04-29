@@ -20,6 +20,8 @@ import {
   TrendingUp,
   Wallet,
   LogOut,
+  Bell,
+  Coins,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Sheet } from "@/components/ui/sheet";
@@ -123,11 +125,24 @@ const auditorMenu: MenuSection[] = [
   },
 ];
 
+const financeMenu: MenuSection[] = [
+  {
+    heading: "Other",
+    items: [
+      { href: "/finance/quotes", labelKey: "quotes", icon: FileText },
+      { href: "/finance/cash-transactions", labelKey: "cashTransactions", icon: Coins },
+      { href: "/finance/notifications", labelKey: "notifications", icon: Bell },
+      { href: "/finance/password", labelKey: "changePassword", icon: KeyRound },
+    ],
+  },
+];
+
 const roleMenuMap: Record<string, MenuSection[]> = {
   owner: ownerMenu,
   admin: adminMenu,
   operator: operatorMenu,
   auditor: auditorMenu,
+  finance: financeMenu,
 };
 
 const roleLabels: Record<string, string> = {
@@ -135,6 +150,7 @@ const roleLabels: Record<string, string> = {
   admin: "Admin",
   operator: "Operator",
   auditor: "Auditor",
+  finance: "Finance",
 };
 
 interface SlidingMenuProps {

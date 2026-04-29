@@ -75,7 +75,11 @@
     "schedule": "කාලසටහන",
     "staffPerformance": "කාර්ය මණ්ඩල කාර්ය සාධනය",
     "leave": "නිවාඩු ඉල්ලීම",
-    "auditorFinance": "මූල්‍ය"
+    "auditorFinance": "මූල්‍ය",
+    "loans": "Loans",
+    "receivables": "Receivables",
+    "notifications": "Notifications",
+    "cashTransactions": "Cash Transactions"
   },
   "vehicles": {
     "title": "යාත්‍රා",
@@ -282,6 +286,24 @@
     "totalDebt": "මුළු ණය",
     "monthlyEmi": "මාසික EMI",
     "pathToProfitability": "ලාභ මාර්ගය"
+  },
+  "financeRoutes": {
+    "dashboardTitle": "Finance",
+    "dashboardPlaceholder": "Finance dashboard — wired in Wave 2.1.",
+    "invoicesTitle": "Invoices",
+    "invoicesPlaceholder": "Invoice list — wired in Wave 2.1.",
+    "quotesTitle": "Quotes",
+    "quotesPlaceholder": "Quote list — wired in Wave 2.1.",
+    "loansTitle": "Loans",
+    "loansPlaceholder": "Loan list — wired in Wave 2.1.",
+    "receivablesTitle": "Receivables",
+    "receivablesPlaceholder": "Receivable list — wired in Wave 2.1.",
+    "cashTransactionsTitle": "Cash Transactions",
+    "cashTransactionsPlaceholder": "Cash ledger — wired in Wave 2.1.",
+    "notificationsTitle": "Notifications",
+    "notificationsPlaceholder": "Notification preferences.",
+    "passwordTitle": "Change password",
+    "passwordPlaceholder": "Password change form."
   },
   "projects": {
     "title": "ව්‍යාපෘති",
