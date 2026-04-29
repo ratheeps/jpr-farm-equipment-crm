@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
-import { db } from "@/db";
+import { withRLS } from "@/db";
 import { dailyLogs, staffProfiles } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import type { OfflineLog } from "@/lib/offline/db";
@@ -15,75 +15,77 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const [profile] = await db
-    .select({ id: staffProfiles.id })
-    .from(staffProfiles)
-    .where(eq(staffProfiles.userId, session.userId));
-
-  if (!profile) {
-    return NextResponse.json({ error: "No staff profile" }, { status: 403 });
-  }
-
   const record = (await request.json()) as OfflineLog;
 
-  if (record.action === "start") {
-    // Check for existing log by deviceId (idempotent)
-    if (record.deviceId) {
-      const [existing] = await db
-        .select({ id: dailyLogs.id })
-        .from(dailyLogs)
-        .where(eq(dailyLogs.clientDeviceId, record.deviceId));
-      if (existing) {
-        return NextResponse.json({ id: existing.id });
-      }
+  return withRLS(session.userId, session.role, async (tx) => {
+    const [profile] = await tx
+      .select({ id: staffProfiles.id })
+      .from(staffProfiles)
+      .where(eq(staffProfiles.userId, session.userId));
+
+    if (!profile) {
+      return NextResponse.json({ error: "No staff profile" }, { status: 403 });
     }
 
-    const [log] = await db
-      .insert(dailyLogs)
-      .values({
-        vehicleId: record.vehicleId,
-        operatorId: profile.id,
-        projectId: record.projectId ?? null,
-        date: record.date,
-        startEngineHours: String(record.startEngineHours),
-        startTime: record.startTime ? new Date(record.startTime) : new Date(),
-        gpsLatStart: record.gpsLatStart ? String(record.gpsLatStart) : null,
-        gpsLngStart: record.gpsLngStart ? String(record.gpsLngStart) : null,
-        syncStatus: "synced",
-        clientDeviceId: record.deviceId,
-      })
-      .returning({ id: dailyLogs.id });
+    if (record.action === "start") {
+      // Check for existing log by deviceId (idempotent)
+      if (record.deviceId) {
+        const [existing] = await tx
+          .select({ id: dailyLogs.id })
+          .from(dailyLogs)
+          .where(eq(dailyLogs.clientDeviceId, record.deviceId));
+        if (existing) {
+          return NextResponse.json({ id: existing.id });
+        }
+      }
 
-    return NextResponse.json({ id: log.id });
-  }
+      const [log] = await tx
+        .insert(dailyLogs)
+        .values({
+          vehicleId: record.vehicleId,
+          operatorId: profile.id,
+          projectId: record.projectId ?? null,
+          date: record.date,
+          startEngineHours: String(record.startEngineHours),
+          startTime: record.startTime ? new Date(record.startTime) : new Date(),
+          gpsLatStart: record.gpsLatStart ? String(record.gpsLatStart) : null,
+          gpsLngStart: record.gpsLngStart ? String(record.gpsLngStart) : null,
+          syncStatus: "synced",
+          clientDeviceId: record.deviceId,
+        })
+        .returning({ id: dailyLogs.id });
 
-  if (record.action === "end" && record.serverId) {
-    await db
-      .update(dailyLogs)
-      .set({
-        endEngineHours: record.endEngineHours
-          ? String(record.endEngineHours)
-          : null,
-        endTime: record.endTime ? new Date(record.endTime) : new Date(),
-        fuelUsedLiters: record.fuelUsedLiters
-          ? String(record.fuelUsedLiters)
-          : null,
-        kmTraveled: record.kmTraveled ? String(record.kmTraveled) : null,
-        acresWorked: record.acresWorked ? String(record.acresWorked) : null,
-        gpsLatEnd: record.gpsLatEnd ? String(record.gpsLatEnd) : null,
-        gpsLngEnd: record.gpsLngEnd ? String(record.gpsLngEnd) : null,
-        notes: record.notes ?? null,
-        updatedAt: new Date(),
-      })
-      .where(
-        and(
-          eq(dailyLogs.id, record.serverId),
-          eq(dailyLogs.operatorId, profile.id)
-        )
-      );
+      return NextResponse.json({ id: log.id });
+    }
 
-    return NextResponse.json({ id: record.serverId });
-  }
+    if (record.action === "end" && record.serverId) {
+      await tx
+        .update(dailyLogs)
+        .set({
+          endEngineHours: record.endEngineHours
+            ? String(record.endEngineHours)
+            : null,
+          endTime: record.endTime ? new Date(record.endTime) : new Date(),
+          fuelUsedLiters: record.fuelUsedLiters
+            ? String(record.fuelUsedLiters)
+            : null,
+          kmTraveled: record.kmTraveled ? String(record.kmTraveled) : null,
+          acresWorked: record.acresWorked ? String(record.acresWorked) : null,
+          gpsLatEnd: record.gpsLatEnd ? String(record.gpsLatEnd) : null,
+          gpsLngEnd: record.gpsLngEnd ? String(record.gpsLngEnd) : null,
+          notes: record.notes ?? null,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(dailyLogs.id, record.serverId),
+            eq(dailyLogs.operatorId, profile.id)
+          )
+        );
 
-  return NextResponse.json({ error: "Invalid action" }, { status: 400 });
+      return NextResponse.json({ id: record.serverId });
+    }
+
+    return NextResponse.json({ error: "Invalid action" }, { status: 400 });
+  });
 }

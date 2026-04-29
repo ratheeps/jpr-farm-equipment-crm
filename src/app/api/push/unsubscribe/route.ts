@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
 import { validateCsrf } from "@/lib/csrf";
-import { db } from "@/db";
+import { withRLS } from "@/db";
 import { pushSubscriptions } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
 
@@ -19,14 +19,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "endpoint is required" }, { status: 400 });
   }
 
-  await db
-    .delete(pushSubscriptions)
-    .where(
-      and(
-        eq(pushSubscriptions.endpoint, body.endpoint),
-        eq(pushSubscriptions.userId, session.userId)
-      )
-    );
+  await withRLS(session.userId, session.role, async (tx) => {
+    await tx
+      .delete(pushSubscriptions)
+      .where(
+        and(
+          eq(pushSubscriptions.endpoint, body.endpoint!),
+          eq(pushSubscriptions.userId, session.userId)
+        )
+      );
+  });
 
   return NextResponse.json({ ok: true });
 }
