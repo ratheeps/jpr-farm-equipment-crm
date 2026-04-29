@@ -1,14 +1,14 @@
 "use server";
 
-import { db } from "@/db";
+import { type DB } from "@/db";
 import { alertEvents, pushSubscriptions, vehicles, companySettings } from "@/db/schema";
 import { eq, and, isNull, sql } from "drizzle-orm";
-import { getIdlingReport, getFuelDiscrepancyReport, getMaintenanceStatusReport } from "./reports";
+import { getIdlingReportTx, getFuelDiscrepancyReportTx, getMaintenanceStatusReportTx } from "./reports";
 import { resolveThreshold } from "@/lib/alerts/thresholds";
 import { sendPushNotification, type PushPayload } from "@/lib/push";
 
-async function getCompanyDefaults() {
-  const [row] = await db.select().from(companySettings).limit(1);
+async function getCompanyDefaults(tx: DB) {
+  const [row] = await tx.select().from(companySettings).limit(1);
   return row ?? {
     defaultIdleWarnPct: null,
     defaultIdleCriticalPct: null,
@@ -16,8 +16,8 @@ async function getCompanyDefaults() {
   };
 }
 
-async function getVehicleThresholdMap() {
-  const rows = await db
+async function getVehicleThresholdMap(tx: DB) {
+  const rows = await tx
     .select({
       id: vehicles.id,
       name: vehicles.name,
@@ -29,13 +29,13 @@ async function getVehicleThresholdMap() {
   return new Map(rows.map((r) => [r.id, r]));
 }
 
-export async function scanAndPersistAlerts() {
+export async function scanAndPersistAlerts(tx: DB) {
   const [idlingRows, fuelRows, maintenanceRows, defaults, vehicleMap] = await Promise.all([
-    getIdlingReport(),
-    getFuelDiscrepancyReport(),
-    getMaintenanceStatusReport(),
-    getCompanyDefaults(),
-    getVehicleThresholdMap(),
+    getIdlingReportTx(tx),
+    getFuelDiscrepancyReportTx(tx),
+    getMaintenanceStatusReportTx(tx),
+    getCompanyDefaults(tx),
+    getVehicleThresholdMap(tx),
   ]);
 
   const today = new Date().toISOString().slice(0, 10);
@@ -80,7 +80,7 @@ export async function scanAndPersistAlerts() {
 
   // Upsert using INSERT ... ON CONFLICT pattern
   for (const u of upserts) {
-    await db.execute(sql`
+    await tx.execute(sql`
       INSERT INTO alert_events (type, severity, vehicle_id, value, detected_date)
       VALUES (${u.type}, ${u.severity}, ${u.vehicleId}, ${u.value}, ${today})
       ON CONFLICT (type, vehicle_id, detected_date) WHERE resolved_at IS NULL
@@ -96,22 +96,22 @@ export async function scanAndPersistAlerts() {
   if (maintenanceRows != null) scannedTypes.add("maintenance_overdue");
 
   const activeVehicleIds = new Set(upserts.map((u) => `${u.type}:${u.vehicleId}`));
-  const openEvents = await db
+  const openEvents = await tx
     .select({ id: alertEvents.id, type: alertEvents.type, vehicleId: alertEvents.vehicleId })
     .from(alertEvents)
     .where(isNull(alertEvents.resolvedAt));
 
   for (const ev of openEvents) {
     if (scannedTypes.has(ev.type) && !activeVehicleIds.has(`${ev.type}:${ev.vehicleId}`)) {
-      await db.update(alertEvents)
+      await tx.update(alertEvents)
         .set({ resolvedAt: new Date() })
         .where(eq(alertEvents.id, ev.id));
     }
   }
 }
 
-export async function sendCriticalPushes() {
-  const pendingCritical = await db
+export async function sendCriticalPushes(tx: DB) {
+  const pendingCritical = await tx
     .select({
       id: alertEvents.id,
       type: alertEvents.type,
@@ -127,11 +127,11 @@ export async function sendCriticalPushes() {
   if (pendingCritical.length === 0) return;
 
   const vehicleNames = new Map(
-    (await db.select({ id: vehicles.id, name: vehicles.name }).from(vehicles))
+    (await tx.select({ id: vehicles.id, name: vehicles.name }).from(vehicles))
       .map((v) => [v.id, v.name])
   );
 
-  const subscribers = await db
+  const subscribers = await tx
     .select()
     .from(pushSubscriptions)
     .where(eq(pushSubscriptions.preferCritical, true));
@@ -152,16 +152,16 @@ export async function sendCriticalPushes() {
       );
     }
 
-    await db.update(alertEvents)
+    await tx.update(alertEvents)
       .set({ pushedAt: new Date() })
       .where(eq(alertEvents.id, event.id));
   }
 }
 
-export async function sendDailyDigest() {
+export async function sendDailyDigest(tx: DB) {
   const today = new Date().toISOString().slice(0, 10);
 
-  const openEvents = await db
+  const openEvents = await tx
     .select({ type: alertEvents.type, severity: alertEvents.severity })
     .from(alertEvents)
     .where(isNull(alertEvents.resolvedAt));
@@ -171,7 +171,7 @@ export async function sendDailyDigest() {
   const criticalCount = openEvents.filter((e) => e.severity === "critical").length;
   const warningCount = openEvents.filter((e) => e.severity === "warning").length;
 
-  const subscribers = await db
+  const subscribers = await tx
     .select()
     .from(pushSubscriptions)
     .where(and(
@@ -191,14 +191,14 @@ export async function sendDailyDigest() {
       { endpoint: sub.endpoint, p256dh: sub.p256dh, auth: sub.auth },
       payload
     );
-    await db.update(pushSubscriptions)
+    await tx.update(pushSubscriptions)
       .set({ lastDigestSentDate: today })
       .where(eq(pushSubscriptions.id, sub.id));
   }
 }
 
-export async function getOpenAlertEvents() {
-  const openEvents = await db
+export async function getOpenAlertEvents(tx: DB) {
+  const openEvents = await tx
     .select({
       id: alertEvents.id,
       type: alertEvents.type,
