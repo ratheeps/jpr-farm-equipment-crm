@@ -1,6 +1,6 @@
 "use server";
 
-import { db } from "@/db";
+import { withRLS, type DB } from "@/db";
 import {
   payrollPeriods,
   staffProfiles,
@@ -16,20 +16,17 @@ import { logAudit } from "@/lib/audit";
 import { validatePayrollGeneration } from "@/lib/validations";
 import { computePayBreakdown } from "@/lib/payroll-calc";
 
-// ─── Generate payroll for a single staff member for a period ─────────────────
+// ─── Internal tx-aware helper ─────────────────────────────────────────────────
 
-export async function generatePayroll(data: {
-  staffId: string;
-  periodStart: string;
-  periodEnd: string;
-}) {
-  const session = await requireSession();
-  if (!isRole(session, "super_admin", "admin")) throw new Error("Forbidden");
-
+async function generatePayrollTx(
+  tx: DB,
+  userId: string,
+  data: { staffId: string; periodStart: string; periodEnd: string }
+): Promise<string> {
   const validated = validatePayrollGeneration(data);
 
   // Fetch staff pay configuration
-  const [staff] = await db
+  const [staff] = await tx
     .select({
       id: staffProfiles.id,
       payRate: staffProfiles.payRate,
@@ -44,7 +41,7 @@ export async function generatePayroll(data: {
   const payRate = Number(staff.payRate ?? 0);
 
   // Fetch individual logs with their vehicle data for per-unit bonus calculation
-  const logsWithVehicles = await db
+  const logsWithVehicles = await tx
     .select({
       startEngineHours: dailyLogs.startEngineHours,
       endEngineHours: dailyLogs.endEngineHours,
@@ -82,7 +79,7 @@ export async function generatePayroll(data: {
     leaveConditions.push(eq(staffLeaves.leaveType, "unpaid"));
   }
 
-  const [leaveAgg] = await db
+  const [leaveAgg] = await tx
     .select({
       leaveDays: sql<string>`COALESCE(SUM(
         ${staffLeaves.endDate}::date - ${staffLeaves.startDate}::date + 1
@@ -138,7 +135,7 @@ export async function generatePayroll(data: {
   const netPay = Math.max(0, breakdown.gross);
 
   // Upsert payroll record (one per staff per period)
-  const existing = await db
+  const existing = await tx
     .select({ id: payrollPeriods.id, status: payrollPeriods.status })
     .from(payrollPeriods)
     .where(
@@ -156,7 +153,7 @@ export async function generatePayroll(data: {
 
   let payrollId: string;
   if (existing[0]) {
-    await db
+    await tx
       .update(payrollPeriods)
       .set({
         totalHoursWorked: String(totalHours),
@@ -175,7 +172,7 @@ export async function generatePayroll(data: {
       .where(eq(payrollPeriods.id, existing[0].id));
     payrollId = existing[0].id;
   } else {
-    const [row] = await db
+    const [row] = await tx
       .insert(payrollPeriods)
       .values({
         staffId: validated.staffId,
@@ -197,9 +194,26 @@ export async function generatePayroll(data: {
     payrollId = row.id;
   }
 
-  await logAudit(null, "create", "payroll_periods", payrollId, session.userId, undefined, {
+  await logAudit(tx, "create", "payroll_periods", payrollId, userId, undefined, {
     staffId: validated.staffId,
     period: `${validated.periodStart} - ${validated.periodEnd}`,
+  });
+
+  return payrollId;
+}
+
+// ─── Generate payroll for a single staff member for a period ─────────────────
+
+export async function generatePayroll(data: {
+  staffId: string;
+  periodStart: string;
+  periodEnd: string;
+}) {
+  const session = await requireSession();
+  if (!isRole(session, "super_admin", "admin")) throw new Error("Forbidden");
+
+  const payrollId = await withRLS(session.userId, session.role, async (tx) => {
+    return generatePayrollTx(tx, session.userId, data);
   });
 
   revalidatePath("/admin/staff/payroll");
@@ -210,18 +224,20 @@ export async function finalizePayroll(payrollId: string) {
   const session = await requireSession();
   if (!isRole(session, "super_admin", "admin")) throw new Error("Forbidden");
 
-  const [row] = await db
-    .select({ status: payrollPeriods.status })
-    .from(payrollPeriods)
-    .where(eq(payrollPeriods.id, payrollId));
+  await withRLS(session.userId, session.role, async (tx) => {
+    const [row] = await tx
+      .select({ status: payrollPeriods.status })
+      .from(payrollPeriods)
+      .where(eq(payrollPeriods.id, payrollId));
 
-  if (!row) throw new Error("Payroll record not found");
-  if (row.status !== "draft") throw new Error("Only draft payroll can be finalized");
+    if (!row) throw new Error("Payroll record not found");
+    if (row.status !== "draft") throw new Error("Only draft payroll can be finalized");
 
-  await db
-    .update(payrollPeriods)
-    .set({ status: "finalized", updatedAt: new Date() })
-    .where(eq(payrollPeriods.id, payrollId));
+    await tx
+      .update(payrollPeriods)
+      .set({ status: "finalized", updatedAt: new Date() })
+      .where(eq(payrollPeriods.id, payrollId));
+  });
 
   revalidatePath("/admin/staff/payroll");
 }
@@ -230,10 +246,12 @@ export async function markPayrollPaid(payrollId: string) {
   const session = await requireSession();
   if (!isRole(session, "super_admin")) throw new Error("Forbidden");
 
-  await db
-    .update(payrollPeriods)
-    .set({ status: "paid", updatedAt: new Date() })
-    .where(eq(payrollPeriods.id, payrollId));
+  await withRLS(session.userId, session.role, async (tx) => {
+    await tx
+      .update(payrollPeriods)
+      .set({ status: "paid", updatedAt: new Date() })
+      .where(eq(payrollPeriods.id, payrollId));
+  });
 
   revalidatePath("/admin/staff/payroll");
 }
@@ -246,36 +264,38 @@ export async function getPayrollList(filters?: {
   const session = await requireSession();
   if (!isRole(session, "super_admin", "admin")) throw new Error("Forbidden");
 
-  const conditions = [];
-  if (filters?.staffId) conditions.push(eq(payrollPeriods.staffId, filters.staffId));
-  if (filters?.periodStart) conditions.push(gte(payrollPeriods.periodStart, filters.periodStart));
-  if (filters?.periodEnd) conditions.push(lte(payrollPeriods.periodEnd, filters.periodEnd));
+  return withRLS(session.userId, session.role, async (tx) => {
+    const conditions = [];
+    if (filters?.staffId) conditions.push(eq(payrollPeriods.staffId, filters.staffId));
+    if (filters?.periodStart) conditions.push(gte(payrollPeriods.periodStart, filters.periodStart));
+    if (filters?.periodEnd) conditions.push(lte(payrollPeriods.periodEnd, filters.periodEnd));
 
-  return db
-    .select({
-      id: payrollPeriods.id,
-      staffId: payrollPeriods.staffId,
-      staffName: staffProfiles.fullName,
-      staffPayType: staffProfiles.payType,
-      periodStart: payrollPeriods.periodStart,
-      periodEnd: payrollPeriods.periodEnd,
-      totalHoursWorked: payrollPeriods.totalHoursWorked,
-      totalAcresWorked: payrollPeriods.totalAcresWorked,
-      totalKmTraveled: payrollPeriods.totalKmTraveled,
-      totalLogDays: payrollPeriods.totalLogDays,
-      leaveDays: payrollPeriods.leaveDays,
-      basePay: payrollPeriods.basePay,
-      performanceBonus: payrollPeriods.performanceBonus,
-      perUnitBonusTotal: payrollPeriods.perUnitBonusTotal,
-      tripAllowanceTotal: payrollPeriods.tripAllowanceTotal,
-      netPay: payrollPeriods.netPay,
-      status: payrollPeriods.status,
-      createdAt: payrollPeriods.createdAt,
-    })
-    .from(payrollPeriods)
-    .innerJoin(staffProfiles, eq(payrollPeriods.staffId, staffProfiles.id))
-    .where(conditions.length > 0 ? and(...conditions) : undefined)
-    .orderBy(payrollPeriods.periodStart, staffProfiles.fullName);
+    return tx
+      .select({
+        id: payrollPeriods.id,
+        staffId: payrollPeriods.staffId,
+        staffName: staffProfiles.fullName,
+        staffPayType: staffProfiles.payType,
+        periodStart: payrollPeriods.periodStart,
+        periodEnd: payrollPeriods.periodEnd,
+        totalHoursWorked: payrollPeriods.totalHoursWorked,
+        totalAcresWorked: payrollPeriods.totalAcresWorked,
+        totalKmTraveled: payrollPeriods.totalKmTraveled,
+        totalLogDays: payrollPeriods.totalLogDays,
+        leaveDays: payrollPeriods.leaveDays,
+        basePay: payrollPeriods.basePay,
+        performanceBonus: payrollPeriods.performanceBonus,
+        perUnitBonusTotal: payrollPeriods.perUnitBonusTotal,
+        tripAllowanceTotal: payrollPeriods.tripAllowanceTotal,
+        netPay: payrollPeriods.netPay,
+        status: payrollPeriods.status,
+        createdAt: payrollPeriods.createdAt,
+      })
+      .from(payrollPeriods)
+      .innerJoin(staffProfiles, eq(payrollPeriods.staffId, staffProfiles.id))
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(payrollPeriods.periodStart, staffProfiles.fullName);
+  });
 }
 
 /** Generate payroll for ALL active operators for a period at once */
@@ -286,15 +306,21 @@ export async function generatePayrollForAll(
   const session = await requireSession();
   if (!isRole(session, "super_admin", "admin")) throw new Error("Forbidden");
 
-  const allOperators = await db
-    .select({ id: staffProfiles.id })
-    .from(staffProfiles)
-    .innerJoin(users, eq(staffProfiles.userId, users.id))
-    .where(and(eq(users.isActive, true), eq(users.role, "operator")));
+  // Fetch all active operators first (no RLS needed for this read, but apply for consistency)
+  const allOperators = await withRLS(session.userId, session.role, async (tx) => {
+    return tx
+      .select({ id: staffProfiles.id })
+      .from(staffProfiles)
+      .innerJoin(users, eq(staffProfiles.userId, users.id))
+      .where(and(eq(users.isActive, true), eq(users.role, "operator")));
+  });
 
+  // Each operator gets its own withRLS transaction to avoid nested transactions
   const results = await Promise.allSettled(
     allOperators.map((op) =>
-      generatePayroll({ staffId: op.id, periodStart, periodEnd })
+      withRLS(session.userId, session.role, async (tx) =>
+        generatePayrollTx(tx, session.userId, { staffId: op.id, periodStart, periodEnd })
+      )
     )
   );
 
