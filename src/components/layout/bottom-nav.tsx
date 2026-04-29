@@ -53,11 +53,19 @@ const auditorNavItems: NavItem[] = [
   { href: "/auditor/export", labelKey: "export", icon: Receipt },
 ];
 
+const financeNavItems: NavItem[] = [
+  { href: "/finance", labelKey: "dashboard", icon: LayoutDashboard },
+  { href: "/finance/invoices", labelKey: "invoices", icon: Receipt },
+  { href: "/finance/loans", labelKey: "loans", icon: Wallet },
+  { href: "/finance/receivables", labelKey: "receivables", icon: ArrowLeftRight },
+];
+
 const roleNavMap: Record<string, NavItem[]> = {
   owner: ownerNavItems,
   admin: adminNavItems,
   operator: operatorNavItems,
   auditor: auditorNavItems,
+  finance: financeNavItems,
 };
 
 interface BottomNavProps {

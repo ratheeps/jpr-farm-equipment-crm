@@ -82,8 +82,15 @@
     {
       "idx": 11,
       "version": "7",
-      "when": 1777258800000,
-      "tag": "0012_rls_function_volatility",
+      "when": 1777300000000,
+      "tag": "0012_finance_enum",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1777400000000,
+      "tag": "0013_rls_function_volatility",
       "breakpoints": true
     }
   ]
