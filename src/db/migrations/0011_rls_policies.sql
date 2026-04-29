@@ -34,13 +34,19 @@ BEGIN
 END $$;
 
 -- 1) Helper functions (idempotent via CREATE OR REPLACE)
-CREATE OR REPLACE FUNCTION app_user_id() RETURNS uuid LANGUAGE sql STABLE
+-- VOLATILE (not STABLE) is required so PostgreSQL does NOT cache the
+-- current_setting() result at prepared-statement plan time. With STABLE,
+-- pg's extended query protocol evaluates the function in the plan's initial
+-- context (where app.current_user_id is empty), causing RLS WITH CHECK to
+-- see NULL and reject parameterized INSERTs/UPDATEs even when the session
+-- variable was correctly set via SET LOCAL / set_config before the statement.
+CREATE OR REPLACE FUNCTION app_user_id() RETURNS uuid LANGUAGE sql VOLATILE
   AS $$ SELECT NULLIF(current_setting('app.current_user_id', true), '')::uuid $$;
 
-CREATE OR REPLACE FUNCTION app_user_role() RETURNS text LANGUAGE sql STABLE
+CREATE OR REPLACE FUNCTION app_user_role() RETURNS text LANGUAGE sql VOLATILE
   AS $$ SELECT NULLIF(current_setting('app.current_user_role', true), '') $$;
 
-CREATE OR REPLACE FUNCTION app_operator_staff_id() RETURNS uuid LANGUAGE sql STABLE
+CREATE OR REPLACE FUNCTION app_operator_staff_id() RETURNS uuid LANGUAGE sql VOLATILE
   AS $$ SELECT id FROM staff_profiles WHERE user_id = app_user_id() $$;
 
 -- Tightened: only the runtime app and migrator roles need to call these.
