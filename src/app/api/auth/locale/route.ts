@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
-import { db } from "@/db";
+import { withRLS } from "@/db";
 import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { signToken } from "@/lib/auth/jwt";
@@ -22,10 +22,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid locale" }, { status: 400 });
   }
 
-  await db
-    .update(users)
-    .set({ preferredLocale: locale, updatedAt: new Date() })
-    .where(eq(users.id, session.userId));
+  await withRLS(session.userId, session.role, async (tx) => {
+    await tx
+      .update(users)
+      .set({ preferredLocale: locale, updatedAt: new Date() })
+      .where(eq(users.id, session.userId));
+  });
 
   const token = await signToken({
     userId: session.userId,

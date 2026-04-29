@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/db";
 import { users } from "@/db/schema";
 import { verifyPassword } from "@/lib/auth/password";
 import { signToken } from "@/lib/auth/jwt";
@@ -8,6 +7,7 @@ import { eq } from "drizzle-orm";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { validateCsrf } from "@/lib/csrf";
 import { isLoginDisabled } from "@/lib/auth/system-user";
+import { withSystemRLS } from "@/lib/db/system-context";
 
 export async function POST(request: NextRequest) {
   // CSRF protection
@@ -43,11 +43,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const [user] = await db
-      .select()
-      .from(users)
-      .where(eq(users.phone, phone))
-      .limit(1);
+    const [user] = await withSystemRLS((tx) =>
+      tx.select().from(users).where(eq(users.phone, phone)).limit(1)
+    );
 
     if (!user || !user.isActive) {
       return NextResponse.json(

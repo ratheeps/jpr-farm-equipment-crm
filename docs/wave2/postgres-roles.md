@@ -21,13 +21,28 @@ GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO jpr_app;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO jpr_app;
 GRANT EXECUTE ON FUNCTION app_user_id(), app_user_role(), app_operator_staff_id()
   TO jpr_app, jpr_migrator;
+ALTER FUNCTION app_user_id() OWNER TO jpr_migrator;
+ALTER FUNCTION app_user_role() OWNER TO jpr_migrator;
+ALTER FUNCTION app_operator_staff_id() OWNER TO jpr_migrator;
 GRANT ALL ON SCHEMA public TO jpr_migrator;
+
+-- drizzle-kit's bookkeeping schema also needs jpr_migrator privileges
+GRANT CREATE ON DATABASE jpr TO jpr_migrator;
+GRANT USAGE, CREATE ON SCHEMA drizzle TO jpr_migrator;
+GRANT ALL ON ALL TABLES IN SCHEMA drizzle TO jpr_migrator;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA drizzle TO jpr_migrator;
+ALTER DEFAULT PRIVILEGES IN SCHEMA drizzle
+  GRANT ALL ON TABLES TO jpr_migrator;
 ```
 
 > The `app_user_id()`, `app_user_role()`, and `app_operator_staff_id()` functions are created
 > by the RLS policies migration (see PR 2.0a, Task A5). The grant statements above will fail
-> if run before that migration; run them in this order: (1) create roles, (2) apply migrations
-> as `jpr_migrator`, (3) run the GRANT EXECUTE block above.
+> if run before that migration; run them in this order: (1) create roles, (2) apply the first
+> RLS migration as `jpr` (the bootstrap superuser), (3) run the GRANT EXECUTE / ALTER OWNER
+> block above so subsequent migrations (e.g. `0012_rls_function_volatility`) can run as
+> `jpr_migrator`. The ALTER OWNER step is required because PostgreSQL allows
+> `CREATE OR REPLACE FUNCTION` only for the function's owner; without it, future migrations
+> that touch these helpers will fail with `must be owner of function app_user_id`.
 
 ## Verification
 

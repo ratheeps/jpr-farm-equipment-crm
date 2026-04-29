@@ -1,6 +1,6 @@
 "use server";
 
-import { db } from "@/db";
+import { withRLS } from "@/db";
 import {
   loans,
   loanPayments,
@@ -69,26 +69,28 @@ export async function getLoans() {
     throw new Error("Forbidden");
   }
 
-  const rows = await db
-    .select({
-      id: loans.id,
-      loanType: loans.loanType,
-      lenderName: loans.lenderName,
-      lenderPhone: loans.lenderPhone,
-      principalAmount: loans.principalAmount,
-      emiAmount: loans.emiAmount,
-      outstandingBalance: loans.outstandingBalance,
-      status: loans.status,
-      startDate: loans.startDate,
-      endDate: loans.endDate,
-      createdAt: loans.createdAt,
-      vehicleName: vehicles.name,
-    })
-    .from(loans)
-    .leftJoin(vehicles, eq(loans.vehicleId, vehicles.id))
-    .orderBy(desc(loans.createdAt));
+  return withRLS(session.userId, session.role, async (tx) => {
+    const rows = await tx
+      .select({
+        id: loans.id,
+        loanType: loans.loanType,
+        lenderName: loans.lenderName,
+        lenderPhone: loans.lenderPhone,
+        principalAmount: loans.principalAmount,
+        emiAmount: loans.emiAmount,
+        outstandingBalance: loans.outstandingBalance,
+        status: loans.status,
+        startDate: loans.startDate,
+        endDate: loans.endDate,
+        createdAt: loans.createdAt,
+        vehicleName: vehicles.name,
+      })
+      .from(loans)
+      .leftJoin(vehicles, eq(loans.vehicleId, vehicles.id))
+      .orderBy(desc(loans.createdAt));
 
-  return rows;
+    return rows;
+  });
 }
 
 export async function getLoan(id: string) {
@@ -97,16 +99,18 @@ export async function getLoan(id: string) {
     throw new Error("Forbidden");
   }
 
-  const [loan] = await db.select().from(loans).where(eq(loans.id, id));
-  if (!loan) return null;
+  return withRLS(session.userId, session.role, async (tx) => {
+    const [loan] = await tx.select().from(loans).where(eq(loans.id, id));
+    if (!loan) return null;
 
-  const payments = await db
-    .select()
-    .from(loanPayments)
-    .where(eq(loanPayments.loanId, id))
-    .orderBy(desc(loanPayments.paymentDate));
+    const payments = await tx
+      .select()
+      .from(loanPayments)
+      .where(eq(loanPayments.loanId, id))
+      .orderBy(desc(loanPayments.paymentDate));
 
-  return { loan, payments };
+    return { loan, payments };
+  });
 }
 
 export async function createLoan(data: LoanFormData) {
@@ -115,35 +119,8 @@ export async function createLoan(data: LoanFormData) {
     throw new Error("Forbidden");
   }
 
-  await db.insert(loans).values({
-    loanType: data.loanType as never,
-    lenderName: data.lenderName,
-    lenderPhone: data.lenderPhone || null,
-    principalAmount: data.principalAmount,
-    interestRatePercent: data.interestRatePercent || null,
-    interestType: data.interestType || "reducing",
-    termMonths: data.termMonths ? parseInt(data.termMonths) : null,
-    emiAmount: data.emiAmount || null,
-    startDate: data.startDate,
-    endDate: data.endDate || null,
-    vehicleId: data.vehicleId || null,
-    outstandingBalance: data.principalAmount,
-    notes: data.notes || null,
-  });
-
-  revalidatePath("/owner/finance");
-  revalidatePath("/owner");
-}
-
-export async function updateLoan(id: string, data: LoanFormData) {
-  const session = await requireSession();
-  if (!isRole(session, "super_admin", "admin")) {
-    throw new Error("Forbidden");
-  }
-
-  await db
-    .update(loans)
-    .set({
+  return withRLS(session.userId, session.role, async (tx) => {
+    await tx.insert(loans).values({
       loanType: data.loanType as never,
       lenderName: data.lenderName,
       lenderPhone: data.lenderPhone || null,
@@ -155,13 +132,44 @@ export async function updateLoan(id: string, data: LoanFormData) {
       startDate: data.startDate,
       endDate: data.endDate || null,
       vehicleId: data.vehicleId || null,
+      outstandingBalance: data.principalAmount,
       notes: data.notes || null,
-      updatedAt: new Date(),
-    })
-    .where(eq(loans.id, id));
+    });
 
-  revalidatePath("/owner/finance");
-  revalidatePath(`/owner/finance/loans/${id}`);
+    revalidatePath("/owner/finance");
+    revalidatePath("/owner");
+  });
+}
+
+export async function updateLoan(id: string, data: LoanFormData) {
+  const session = await requireSession();
+  if (!isRole(session, "super_admin", "admin")) {
+    throw new Error("Forbidden");
+  }
+
+  return withRLS(session.userId, session.role, async (tx) => {
+    await tx
+      .update(loans)
+      .set({
+        loanType: data.loanType as never,
+        lenderName: data.lenderName,
+        lenderPhone: data.lenderPhone || null,
+        principalAmount: data.principalAmount,
+        interestRatePercent: data.interestRatePercent || null,
+        interestType: data.interestType || "reducing",
+        termMonths: data.termMonths ? parseInt(data.termMonths) : null,
+        emiAmount: data.emiAmount || null,
+        startDate: data.startDate,
+        endDate: data.endDate || null,
+        vehicleId: data.vehicleId || null,
+        notes: data.notes || null,
+        updatedAt: new Date(),
+      })
+      .where(eq(loans.id, id));
+
+    revalidatePath("/owner/finance");
+    revalidatePath(`/owner/finance/loans/${id}`);
+  });
 }
 
 export async function deleteLoan(id: string) {
@@ -170,12 +178,14 @@ export async function deleteLoan(id: string) {
     throw new Error("Forbidden");
   }
 
-  await db
-    .update(loans)
-    .set({ status: "completed", updatedAt: new Date() })
-    .where(eq(loans.id, id));
+  return withRLS(session.userId, session.role, async (tx) => {
+    await tx
+      .update(loans)
+      .set({ status: "completed", updatedAt: new Date() })
+      .where(eq(loans.id, id));
 
-  revalidatePath("/owner/finance");
+    revalidatePath("/owner/finance");
+  });
 }
 
 export async function recordLoanPayment(loanId: string, data: LoanPaymentData) {
@@ -184,45 +194,47 @@ export async function recordLoanPayment(loanId: string, data: LoanPaymentData) {
     throw new Error("Forbidden");
   }
 
-  await db.insert(loanPayments).values({
-    loanId,
-    amount: data.amount,
-    principalPortion: data.principalPortion || null,
-    interestPortion: data.interestPortion || null,
-    paymentDate: data.paymentDate,
-    paymentMethod: data.paymentMethod || null,
-    referenceNumber: data.referenceNumber || null,
-    notes: data.notes || null,
+  return withRLS(session.userId, session.role, async (tx) => {
+    await tx.insert(loanPayments).values({
+      loanId,
+      amount: data.amount,
+      principalPortion: data.principalPortion || null,
+      interestPortion: data.interestPortion || null,
+      paymentDate: data.paymentDate,
+      paymentMethod: data.paymentMethod || null,
+      referenceNumber: data.referenceNumber || null,
+      notes: data.notes || null,
+    });
+
+    // Recalculate outstanding balance
+    const [{ totalPaid }] = await tx
+      .select({ totalPaid: sum(loanPayments.amount) })
+      .from(loanPayments)
+      .where(eq(loanPayments.loanId, loanId));
+
+    const [loan] = await tx
+      .select({ principalAmount: loans.principalAmount })
+      .from(loans)
+      .where(eq(loans.id, loanId));
+
+    const newBalance = Math.max(
+      0,
+      parseFloat(loan.principalAmount) - parseFloat(totalPaid ?? "0")
+    );
+
+    await tx
+      .update(loans)
+      .set({
+        outstandingBalance: String(newBalance),
+        status: newBalance <= 0 ? "completed" : "active",
+        updatedAt: new Date(),
+      })
+      .where(eq(loans.id, loanId));
+
+    revalidatePath(`/owner/finance/loans/${loanId}`);
+    revalidatePath("/owner/finance");
+    revalidatePath("/owner");
   });
-
-  // Recalculate outstanding balance
-  const [{ totalPaid }] = await db
-    .select({ totalPaid: sum(loanPayments.amount) })
-    .from(loanPayments)
-    .where(eq(loanPayments.loanId, loanId));
-
-  const [loan] = await db
-    .select({ principalAmount: loans.principalAmount })
-    .from(loans)
-    .where(eq(loans.id, loanId));
-
-  const newBalance = Math.max(
-    0,
-    parseFloat(loan.principalAmount) - parseFloat(totalPaid ?? "0")
-  );
-
-  await db
-    .update(loans)
-    .set({
-      outstandingBalance: String(newBalance),
-      status: newBalance <= 0 ? "completed" : "active",
-      updatedAt: new Date(),
-    })
-    .where(eq(loans.id, loanId));
-
-  revalidatePath(`/owner/finance/loans/${loanId}`);
-  revalidatePath("/owner/finance");
-  revalidatePath("/owner");
 }
 
 export async function deleteLoanPayment(paymentId: string, loanId: string) {
@@ -231,35 +243,37 @@ export async function deleteLoanPayment(paymentId: string, loanId: string) {
     throw new Error("Forbidden");
   }
 
-  await db.delete(loanPayments).where(eq(loanPayments.id, paymentId));
+  return withRLS(session.userId, session.role, async (tx) => {
+    await tx.delete(loanPayments).where(eq(loanPayments.id, paymentId));
 
-  // Recalculate outstanding balance
-  const [{ totalPaid }] = await db
-    .select({ totalPaid: sum(loanPayments.amount) })
-    .from(loanPayments)
-    .where(eq(loanPayments.loanId, loanId));
+    // Recalculate outstanding balance
+    const [{ totalPaid }] = await tx
+      .select({ totalPaid: sum(loanPayments.amount) })
+      .from(loanPayments)
+      .where(eq(loanPayments.loanId, loanId));
 
-  const [loan] = await db
-    .select({ principalAmount: loans.principalAmount })
-    .from(loans)
-    .where(eq(loans.id, loanId));
+    const [loan] = await tx
+      .select({ principalAmount: loans.principalAmount })
+      .from(loans)
+      .where(eq(loans.id, loanId));
 
-  const newBalance = Math.max(
-    0,
-    parseFloat(loan.principalAmount) - parseFloat(totalPaid ?? "0")
-  );
+    const newBalance = Math.max(
+      0,
+      parseFloat(loan.principalAmount) - parseFloat(totalPaid ?? "0")
+    );
 
-  await db
-    .update(loans)
-    .set({
-      outstandingBalance: String(newBalance),
-      status: newBalance <= 0 ? "completed" : "active",
-      updatedAt: new Date(),
-    })
-    .where(eq(loans.id, loanId));
+    await tx
+      .update(loans)
+      .set({
+        outstandingBalance: String(newBalance),
+        status: newBalance <= 0 ? "completed" : "active",
+        updatedAt: new Date(),
+      })
+      .where(eq(loans.id, loanId));
 
-  revalidatePath(`/owner/finance/loans/${loanId}`);
-  revalidatePath("/owner/finance");
+    revalidatePath(`/owner/finance/loans/${loanId}`);
+    revalidatePath("/owner/finance");
+  });
 }
 
 // ── Receivables ────────────────────────────────────────────────────────────
@@ -270,10 +284,12 @@ export async function getReceivables() {
     throw new Error("Forbidden");
   }
 
-  return db
-    .select()
-    .from(receivables)
-    .orderBy(desc(receivables.createdAt));
+  return withRLS(session.userId, session.role, async (tx) => {
+    return tx
+      .select()
+      .from(receivables)
+      .orderBy(desc(receivables.createdAt));
+  });
 }
 
 export async function getReceivable(id: string) {
@@ -282,20 +298,22 @@ export async function getReceivable(id: string) {
     throw new Error("Forbidden");
   }
 
-  const [receivable] = await db
-    .select()
-    .from(receivables)
-    .where(eq(receivables.id, id));
+  return withRLS(session.userId, session.role, async (tx) => {
+    const [receivable] = await tx
+      .select()
+      .from(receivables)
+      .where(eq(receivables.id, id));
 
-  if (!receivable) return null;
+    if (!receivable) return null;
 
-  const payments = await db
-    .select()
-    .from(receivablePayments)
-    .where(eq(receivablePayments.receivableId, id))
-    .orderBy(desc(receivablePayments.paymentDate));
+    const payments = await tx
+      .select()
+      .from(receivablePayments)
+      .where(eq(receivablePayments.receivableId, id))
+      .orderBy(desc(receivablePayments.paymentDate));
 
-  return { receivable, payments };
+    return { receivable, payments };
+  });
 }
 
 export async function createReceivable(data: ReceivableFormData) {
@@ -304,23 +322,25 @@ export async function createReceivable(data: ReceivableFormData) {
     throw new Error("Forbidden");
   }
 
-  await db.insert(receivables).values({
-    type: data.type,
-    debtorName: data.debtorName,
-    debtorPhone: data.debtorPhone || null,
-    projectId: data.projectId || null,
-    invoiceId: data.invoiceId || null,
-    principalAmount: data.principalAmount,
-    interestRatePercent: data.interestRatePercent || null,
-    totalDue: data.totalDue,
-    amountReceived: "0",
-    outstandingBalance: data.totalDue,
-    dueDate: data.dueDate || null,
-    notes: data.notes || null,
-  });
+  return withRLS(session.userId, session.role, async (tx) => {
+    await tx.insert(receivables).values({
+      type: data.type,
+      debtorName: data.debtorName,
+      debtorPhone: data.debtorPhone || null,
+      projectId: data.projectId || null,
+      invoiceId: data.invoiceId || null,
+      principalAmount: data.principalAmount,
+      interestRatePercent: data.interestRatePercent || null,
+      totalDue: data.totalDue,
+      amountReceived: "0",
+      outstandingBalance: data.totalDue,
+      dueDate: data.dueDate || null,
+      notes: data.notes || null,
+    });
 
-  revalidatePath("/owner/finance");
-  revalidatePath("/owner");
+    revalidatePath("/owner/finance");
+    revalidatePath("/owner");
+  });
 }
 
 export async function updateReceivable(id: string, data: ReceivableFormData) {
@@ -329,24 +349,26 @@ export async function updateReceivable(id: string, data: ReceivableFormData) {
     throw new Error("Forbidden");
   }
 
-  await db
-    .update(receivables)
-    .set({
-      type: data.type,
-      debtorName: data.debtorName,
-      debtorPhone: data.debtorPhone || null,
-      projectId: data.projectId || null,
-      principalAmount: data.principalAmount,
-      interestRatePercent: data.interestRatePercent || null,
-      totalDue: data.totalDue,
-      dueDate: data.dueDate || null,
-      notes: data.notes || null,
-      updatedAt: new Date(),
-    })
-    .where(eq(receivables.id, id));
+  return withRLS(session.userId, session.role, async (tx) => {
+    await tx
+      .update(receivables)
+      .set({
+        type: data.type,
+        debtorName: data.debtorName,
+        debtorPhone: data.debtorPhone || null,
+        projectId: data.projectId || null,
+        principalAmount: data.principalAmount,
+        interestRatePercent: data.interestRatePercent || null,
+        totalDue: data.totalDue,
+        dueDate: data.dueDate || null,
+        notes: data.notes || null,
+        updatedAt: new Date(),
+      })
+      .where(eq(receivables.id, id));
 
-  revalidatePath("/owner/finance");
-  revalidatePath(`/owner/finance/receivables/${id}`);
+    revalidatePath("/owner/finance");
+    revalidatePath(`/owner/finance/receivables/${id}`);
+  });
 }
 
 export async function deleteReceivable(id: string) {
@@ -355,12 +377,14 @@ export async function deleteReceivable(id: string) {
     throw new Error("Forbidden");
   }
 
-  await db
-    .update(receivables)
-    .set({ status: "written_off", updatedAt: new Date() })
-    .where(eq(receivables.id, id));
+  return withRLS(session.userId, session.role, async (tx) => {
+    await tx
+      .update(receivables)
+      .set({ status: "written_off", updatedAt: new Date() })
+      .where(eq(receivables.id, id));
 
-  revalidatePath("/owner/finance");
+    revalidatePath("/owner/finance");
+  });
 }
 
 export async function recordReceivablePayment(
@@ -372,47 +396,49 @@ export async function recordReceivablePayment(
     throw new Error("Forbidden");
   }
 
-  await db.insert(receivablePayments).values({
-    receivableId,
-    amount: data.amount,
-    paymentDate: data.paymentDate,
-    paymentMethod: data.paymentMethod || null,
-    referenceNumber: data.referenceNumber || null,
-    notes: data.notes || null,
+  return withRLS(session.userId, session.role, async (tx) => {
+    await tx.insert(receivablePayments).values({
+      receivableId,
+      amount: data.amount,
+      paymentDate: data.paymentDate,
+      paymentMethod: data.paymentMethod || null,
+      referenceNumber: data.referenceNumber || null,
+      notes: data.notes || null,
+    });
+
+    // Recalculate balances
+    const [{ totalReceived }] = await tx
+      .select({ totalReceived: sum(receivablePayments.amount) })
+      .from(receivablePayments)
+      .where(eq(receivablePayments.receivableId, receivableId));
+
+    const [rec] = await tx
+      .select({ totalDue: receivables.totalDue })
+      .from(receivables)
+      .where(eq(receivables.id, receivableId));
+
+    const received = parseFloat(totalReceived ?? "0");
+    const totalDue = parseFloat(rec.totalDue);
+    const newBalance = Math.max(0, totalDue - received);
+
+    let newStatus: "pending" | "partial" | "paid" = "pending";
+    if (received >= totalDue) newStatus = "paid";
+    else if (received > 0) newStatus = "partial";
+
+    await tx
+      .update(receivables)
+      .set({
+        amountReceived: String(received),
+        outstandingBalance: String(newBalance),
+        status: newStatus,
+        updatedAt: new Date(),
+      })
+      .where(eq(receivables.id, receivableId));
+
+    revalidatePath(`/owner/finance/receivables/${receivableId}`);
+    revalidatePath("/owner/finance");
+    revalidatePath("/owner");
   });
-
-  // Recalculate balances
-  const [{ totalReceived }] = await db
-    .select({ totalReceived: sum(receivablePayments.amount) })
-    .from(receivablePayments)
-    .where(eq(receivablePayments.receivableId, receivableId));
-
-  const [rec] = await db
-    .select({ totalDue: receivables.totalDue })
-    .from(receivables)
-    .where(eq(receivables.id, receivableId));
-
-  const received = parseFloat(totalReceived ?? "0");
-  const totalDue = parseFloat(rec.totalDue);
-  const newBalance = Math.max(0, totalDue - received);
-
-  let newStatus: "pending" | "partial" | "paid" = "pending";
-  if (received >= totalDue) newStatus = "paid";
-  else if (received > 0) newStatus = "partial";
-
-  await db
-    .update(receivables)
-    .set({
-      amountReceived: String(received),
-      outstandingBalance: String(newBalance),
-      status: newStatus,
-      updatedAt: new Date(),
-    })
-    .where(eq(receivables.id, receivableId));
-
-  revalidatePath(`/owner/finance/receivables/${receivableId}`);
-  revalidatePath("/owner/finance");
-  revalidatePath("/owner");
 }
 
 export async function deleteReceivablePayment(
@@ -424,41 +450,43 @@ export async function deleteReceivablePayment(
     throw new Error("Forbidden");
   }
 
-  await db
-    .delete(receivablePayments)
-    .where(eq(receivablePayments.id, paymentId));
+  return withRLS(session.userId, session.role, async (tx) => {
+    await tx
+      .delete(receivablePayments)
+      .where(eq(receivablePayments.id, paymentId));
 
-  // Recalculate
-  const [{ totalReceived }] = await db
-    .select({ totalReceived: sum(receivablePayments.amount) })
-    .from(receivablePayments)
-    .where(eq(receivablePayments.receivableId, receivableId));
+    // Recalculate
+    const [{ totalReceived }] = await tx
+      .select({ totalReceived: sum(receivablePayments.amount) })
+      .from(receivablePayments)
+      .where(eq(receivablePayments.receivableId, receivableId));
 
-  const [rec] = await db
-    .select({ totalDue: receivables.totalDue })
-    .from(receivables)
-    .where(eq(receivables.id, receivableId));
+    const [rec] = await tx
+      .select({ totalDue: receivables.totalDue })
+      .from(receivables)
+      .where(eq(receivables.id, receivableId));
 
-  const received = parseFloat(totalReceived ?? "0");
-  const totalDue = parseFloat(rec.totalDue);
-  const newBalance = Math.max(0, totalDue - received);
+    const received = parseFloat(totalReceived ?? "0");
+    const totalDue = parseFloat(rec.totalDue);
+    const newBalance = Math.max(0, totalDue - received);
 
-  let newStatus: "pending" | "partial" | "paid" = "pending";
-  if (received >= totalDue) newStatus = "paid";
-  else if (received > 0) newStatus = "partial";
+    let newStatus: "pending" | "partial" | "paid" = "pending";
+    if (received >= totalDue) newStatus = "paid";
+    else if (received > 0) newStatus = "partial";
 
-  await db
-    .update(receivables)
-    .set({
-      amountReceived: String(received),
-      outstandingBalance: String(newBalance),
-      status: newStatus,
-      updatedAt: new Date(),
-    })
-    .where(eq(receivables.id, receivableId));
+    await tx
+      .update(receivables)
+      .set({
+        amountReceived: String(received),
+        outstandingBalance: String(newBalance),
+        status: newStatus,
+        updatedAt: new Date(),
+      })
+      .where(eq(receivables.id, receivableId));
 
-  revalidatePath(`/owner/finance/receivables/${receivableId}`);
-  revalidatePath("/owner/finance");
+    revalidatePath(`/owner/finance/receivables/${receivableId}`);
+    revalidatePath("/owner/finance");
+  });
 }
 
 // ── Summary ────────────────────────────────────────────────────────────────
@@ -469,26 +497,28 @@ export async function getFinanceSummary() {
     throw new Error("Forbidden");
   }
 
-  const [debtResult] = await db
-    .select({ total: sum(loans.outstandingBalance) })
-    .from(loans)
-    .where(eq(loans.status, "active"));
+  return withRLS(session.userId, session.role, async (tx) => {
+    const [debtResult] = await tx
+      .select({ total: sum(loans.outstandingBalance) })
+      .from(loans)
+      .where(eq(loans.status, "active"));
 
-  const [emiResult] = await db
-    .select({ total: sum(loans.emiAmount) })
-    .from(loans)
-    .where(eq(loans.status, "active"));
+    const [emiResult] = await tx
+      .select({ total: sum(loans.emiAmount) })
+      .from(loans)
+      .where(eq(loans.status, "active"));
 
-  const [receivablesResult] = await db
-    .select({ total: sum(receivables.outstandingBalance) })
-    .from(receivables);
+    const [receivablesResult] = await tx
+      .select({ total: sum(receivables.outstandingBalance) })
+      .from(receivables);
 
-  const totalDebt = parseFloat(debtResult?.total ?? "0");
-  const monthlyEmi = parseFloat(emiResult?.total ?? "0");
-  const totalReceivables = parseFloat(receivablesResult?.total ?? "0");
-  const netWorth = totalReceivables - totalDebt;
+    const totalDebt = parseFloat(debtResult?.total ?? "0");
+    const monthlyEmi = parseFloat(emiResult?.total ?? "0");
+    const totalReceivables = parseFloat(receivablesResult?.total ?? "0");
+    const netWorth = totalReceivables - totalDebt;
 
-  return { totalDebt, monthlyEmi, totalReceivables, netWorth };
+    return { totalDebt, monthlyEmi, totalReceivables, netWorth };
+  });
 }
 
 // ── Transactions ───────────────────────────────────────────────────────────
@@ -499,8 +529,10 @@ export async function getCashTransactions() {
     throw new Error("Forbidden");
   }
 
-  return db
-    .select()
-    .from(cashTransactions)
-    .orderBy(desc(cashTransactions.transactionDate));
+  return withRLS(session.userId, session.role, async (tx) => {
+    return tx
+      .select()
+      .from(cashTransactions)
+      .orderBy(desc(cashTransactions.transactionDate));
+  });
 }

@@ -1,6 +1,6 @@
 "use server";
 
-import { db } from "@/db";
+import { withRLS } from "@/db";
 import { vehicles } from "@/db/schema";
 import { requireSession, isRole } from "@/lib/auth/session";
 import { eq } from "drizzle-orm";
@@ -37,28 +37,30 @@ export async function createVehicle(data: VehicleFormData) {
 
   const validated = validateVehicle(data);
 
-  await db.insert(vehicles).values({
-    name: validated.name,
-    registrationNumber: validated.registrationNumber ?? null,
-    vehicleType: validated.vehicleType as never,
-    billingModel: validated.billingModel as never,
-    ratePerHour: validated.ratePerHour ?? null,
-    ratePerAcre: validated.ratePerAcre ?? null,
-    ratePerKm: validated.ratePerKm ?? null,
-    ratePerTask: validated.ratePerTask ?? null,
-    operatorRatePerUnit: validated.operatorRatePerUnit ?? null,
-    tripAllowance: validated.tripAllowance ?? null,
-    fuelConsumptionBaseline: validated.fuelConsumptionBaseline ?? null,
-    maintenanceIntervalHours: validated.maintenanceIntervalHours ?? 250,
-    currentEngineHours: validated.currentEngineHours ?? "0",
-    status: validated.status as never,
-    notes: validated.notes ?? null,
-    idleWarnPct: data.idleWarnPct || null,
-    idleCriticalPct: data.idleCriticalPct || null,
-    fuelVariancePct: data.fuelVariancePct || null,
-  });
+  await withRLS(session.userId, session.role, async (tx) => {
+    await tx.insert(vehicles).values({
+      name: validated.name,
+      registrationNumber: validated.registrationNumber ?? null,
+      vehicleType: validated.vehicleType as never,
+      billingModel: validated.billingModel as never,
+      ratePerHour: validated.ratePerHour ?? null,
+      ratePerAcre: validated.ratePerAcre ?? null,
+      ratePerKm: validated.ratePerKm ?? null,
+      ratePerTask: validated.ratePerTask ?? null,
+      operatorRatePerUnit: validated.operatorRatePerUnit ?? null,
+      tripAllowance: validated.tripAllowance ?? null,
+      fuelConsumptionBaseline: validated.fuelConsumptionBaseline ?? null,
+      maintenanceIntervalHours: validated.maintenanceIntervalHours ?? 250,
+      currentEngineHours: validated.currentEngineHours ?? "0",
+      status: validated.status as never,
+      notes: validated.notes ?? null,
+      idleWarnPct: data.idleWarnPct || null,
+      idleCriticalPct: data.idleCriticalPct || null,
+      fuelVariancePct: data.fuelVariancePct || null,
+    });
 
-  await logAudit("create", "vehicles", validated.name, session.userId, undefined, validated as Record<string, unknown>);
+    await logAudit(tx, "create", "vehicles", validated.name, session.userId, undefined, validated as Record<string, unknown>);
+  });
 
   revalidatePath("/admin/vehicles");
   revalidatePath("/owner");
@@ -72,32 +74,34 @@ export async function updateVehicle(id: string, data: VehicleFormData) {
 
   const validated = validateVehicle(data);
 
-  await db
-    .update(vehicles)
-    .set({
-      name: data.name,
-      registrationNumber: data.registrationNumber || null,
-      vehicleType: data.vehicleType as never,
-      billingModel: data.billingModel as never,
-      ratePerHour: validated.ratePerHour ?? null,
-      ratePerAcre: validated.ratePerAcre ?? null,
-      ratePerKm: validated.ratePerKm ?? null,
-      ratePerTask: validated.ratePerTask ?? null,
-      operatorRatePerUnit: validated.operatorRatePerUnit ?? null,
-      tripAllowance: validated.tripAllowance ?? null,
-      fuelConsumptionBaseline: data.fuelConsumptionBaseline || null,
-      maintenanceIntervalHours: data.maintenanceIntervalHours ?? 250,
-      currentEngineHours: data.currentEngineHours || "0",
-      status: data.status as never,
-      notes: data.notes || null,
-      idleWarnPct: data.idleWarnPct || null,
-      idleCriticalPct: data.idleCriticalPct || null,
-      fuelVariancePct: data.fuelVariancePct || null,
-      updatedAt: new Date(),
-    })
-    .where(eq(vehicles.id, id));
+  await withRLS(session.userId, session.role, async (tx) => {
+    await tx
+      .update(vehicles)
+      .set({
+        name: data.name,
+        registrationNumber: data.registrationNumber || null,
+        vehicleType: data.vehicleType as never,
+        billingModel: data.billingModel as never,
+        ratePerHour: validated.ratePerHour ?? null,
+        ratePerAcre: validated.ratePerAcre ?? null,
+        ratePerKm: validated.ratePerKm ?? null,
+        ratePerTask: validated.ratePerTask ?? null,
+        operatorRatePerUnit: validated.operatorRatePerUnit ?? null,
+        tripAllowance: validated.tripAllowance ?? null,
+        fuelConsumptionBaseline: data.fuelConsumptionBaseline || null,
+        maintenanceIntervalHours: data.maintenanceIntervalHours ?? 250,
+        currentEngineHours: data.currentEngineHours || "0",
+        status: data.status as never,
+        notes: data.notes || null,
+        idleWarnPct: data.idleWarnPct || null,
+        idleCriticalPct: data.idleCriticalPct || null,
+        fuelVariancePct: data.fuelVariancePct || null,
+        updatedAt: new Date(),
+      })
+      .where(eq(vehicles.id, id));
 
-  await logAudit("update", "vehicles", id, session.userId, undefined, data as unknown as Record<string, unknown>);
+    await logAudit(tx, "update", "vehicles", id, session.userId, undefined, data as unknown as Record<string, unknown>);
+  });
 
   revalidatePath("/admin/vehicles");
   revalidatePath(`/admin/vehicles/${id}`);
@@ -111,11 +115,15 @@ export async function updateVehicleStatus(
   if (!isRole(session, "super_admin", "admin")) {
     throw new Error("Forbidden");
   }
-  await db
-    .update(vehicles)
-    .set({ status: status as never, updatedAt: new Date() })
-    .where(eq(vehicles.id, id));
-  await logAudit("update", "vehicles", id, session.userId, undefined, { status });
+
+  await withRLS(session.userId, session.role, async (tx) => {
+    await tx
+      .update(vehicles)
+      .set({ status: status as never, updatedAt: new Date() })
+      .where(eq(vehicles.id, id));
+    await logAudit(tx, "update", "vehicles", id, session.userId, undefined, { status });
+  });
+
   revalidatePath("/admin/vehicles");
   revalidatePath(`/admin/vehicles/${id}`);
 }
@@ -126,8 +134,11 @@ export async function deleteVehicle(id: string) {
     throw new Error("Forbidden");
   }
 
-  await db.update(vehicles).set({ status: "inactive" }).where(eq(vehicles.id, id));
-  await logAudit("deactivate", "vehicles", id, session.userId);
+  await withRLS(session.userId, session.role, async (tx) => {
+    await tx.update(vehicles).set({ status: "inactive" }).where(eq(vehicles.id, id));
+    await logAudit(tx, "deactivate", "vehicles", id, session.userId);
+  });
+
   revalidatePath("/admin/vehicles");
 }
 
@@ -136,5 +147,7 @@ export async function getVehicles() {
   if (!isRole(session, "super_admin", "admin", "auditor")) {
     throw new Error("Forbidden");
   }
-  return db.select().from(vehicles).orderBy(vehicles.name);
+  return withRLS(session.userId, session.role, async (tx) =>
+    tx.select().from(vehicles).orderBy(vehicles.name)
+  );
 }

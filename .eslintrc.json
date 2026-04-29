@@ -12,7 +12,7 @@
       "excludedFiles": ["src/app/api/health/route.ts"],
       "rules": {
         "no-restricted-syntax": [
-          "warn",
+          "error",
           {
             "selector": "MemberExpression[object.name='db'][property.name=/^(select|insert|update|delete|transaction|execute|query)$/]",
             "message": "Direct `db.*` calls are banned in actions/API routes. Use `withRLS(userId, role, async (tx) => { … })` (or `withSystemRLS` for cron) and use `tx` for all queries. See docs/superpowers/specs/2026-04-26-wave2-critical-gaps-design.md §2.1."
