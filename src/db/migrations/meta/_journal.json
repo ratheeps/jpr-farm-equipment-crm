@@ -78,6 +78,13 @@
       "when": 1777225600000,
       "tag": "0011_rls_policies",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1777300000000,
+      "tag": "0012_finance_enum",
+      "breakpoints": true
     }
   ]
 }
