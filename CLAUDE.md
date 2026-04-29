@@ -6,22 +6,22 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 # Development
-npm run dev           # Start dev server
-npm run build         # Production build
-npm run start         # Start production server
-npm run lint          # Run ESLint
+pnpm dev              # Start dev server
+pnpm build            # Production build
+pnpm start            # Start production server
+pnpm lint             # Run ESLint
 
 # Database (Drizzle ORM)
-npm run db:generate   # Generate migration files from schema changes
-npm run db:migrate    # Apply pending migrations
-npm run db:push       # Push schema directly (dev only)
-npm run db:studio     # Open Drizzle Studio GUI
+pnpm db:generate      # Generate migration files from schema changes
+pnpm db:migrate       # Apply pending migrations
+pnpm db:push          # Push schema directly (dev only)
+pnpm db:studio        # Open Drizzle Studio GUI
 
-# Seed the database (tsx must be installed: npm install -D tsx dotenv)
-npx tsx src/db/seed.ts
+# Seed the database
+pnpm db:seed
 ```
 
-No test runner is configured yet.
+Tests run via `pnpm test` (vitest).
 
 ## Environment Setup
 
