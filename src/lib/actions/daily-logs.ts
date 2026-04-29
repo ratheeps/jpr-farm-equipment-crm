@@ -259,32 +259,36 @@ export async function getLogHistory(limit = 30) {
 }
 
 export async function getActiveVehicles() {
-  await requireSession();
-  return db
-    .select({
-      id: vehicles.id,
-      name: vehicles.name,
-      registrationNumber: vehicles.registrationNumber,
-      vehicleType: vehicles.vehicleType,
-      billingModel: vehicles.billingModel,
-      currentEngineHours: vehicles.currentEngineHours,
-    })
-    .from(vehicles)
-    .where(eq(vehicles.status, "active"))
-    .orderBy(vehicles.name);
+  const session = await requireSession();
+  return withRLS(session.userId, session.role, async (tx) =>
+    tx
+      .select({
+        id: vehicles.id,
+        name: vehicles.name,
+        registrationNumber: vehicles.registrationNumber,
+        vehicleType: vehicles.vehicleType,
+        billingModel: vehicles.billingModel,
+        currentEngineHours: vehicles.currentEngineHours,
+      })
+      .from(vehicles)
+      .where(eq(vehicles.status, "active"))
+      .orderBy(vehicles.name)
+  );
 }
 
 export async function getActiveProjects() {
-  await requireSession();
-  return db
-    .select({
-      id: projects.id,
-      clientName: projects.clientName,
-      siteLocation: projects.siteLocationText,
-    })
-    .from(projects)
-    .where(eq(projects.status, "active"))
-    .orderBy(projects.clientName);
+  const session = await requireSession();
+  return withRLS(session.userId, session.role, async (tx) =>
+    tx
+      .select({
+        id: projects.id,
+        clientName: projects.clientName,
+        siteLocation: projects.siteLocationText,
+      })
+      .from(projects)
+      .where(eq(projects.status, "active"))
+      .orderBy(projects.clientName)
+  );
 }
 
 /** Returns only active projects assigned to the currently logged-in operator (directly or via vehicle date range) */

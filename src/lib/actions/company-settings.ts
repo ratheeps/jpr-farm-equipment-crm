@@ -1,6 +1,6 @@
 "use server";
 
-import { db } from "@/db";
+import { withRLS } from "@/db";
 import { companySettings } from "@/db/schema";
 import { requireSession, isRole } from "@/lib/auth/session";
 import { assertOptionalString, assertOptionalNumericString, assertString } from "@/lib/validations";
@@ -8,8 +8,11 @@ import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 export async function getCompanySettings() {
-  const [row] = await db.select().from(companySettings).limit(1);
-  return row ?? null;
+  const session = await requireSession();
+  return withRLS(session.userId, session.role, async (tx) => {
+    const [row] = await tx.select().from(companySettings).limit(1);
+    return row ?? null;
+  });
 }
 
 export async function upsertCompanySettings(data: {
@@ -34,33 +37,35 @@ export async function upsertCompanySettings(data: {
 
   const companyName = assertString(data.companyName, "Company name");
 
-  const [existing] = await db.select({ id: companySettings.id }).from(companySettings).limit(1);
+  await withRLS(session.userId, session.role, async (tx) => {
+    const [existing] = await tx.select({ id: companySettings.id }).from(companySettings).limit(1);
 
-  const values = {
-    companyName,
-    address: assertOptionalString(data.address) ?? null,
-    phone: assertOptionalString(data.phone) ?? null,
-    email: assertOptionalString(data.email) ?? null,
-    taxNumber: assertOptionalString(data.taxNumber) ?? null,
-    bankName: assertOptionalString(data.bankName) ?? null,
-    bankAccountNumber: assertOptionalString(data.bankAccountNumber) ?? null,
-    bankBranch: assertOptionalString(data.bankBranch) ?? null,
-    logoUrl: assertOptionalString(data.logoUrl) ?? null,
-    invoiceFooterNote: assertOptionalString(data.invoiceFooterNote) ?? null,
-    defaultIdleWarnPct: assertOptionalNumericString(data.defaultIdleWarnPct) ?? null,
-    defaultIdleCriticalPct: assertOptionalNumericString(data.defaultIdleCriticalPct) ?? null,
-    defaultFuelVariancePct: assertOptionalNumericString(data.defaultFuelVariancePct) ?? null,
-    updatedAt: new Date(),
-  };
+    const values = {
+      companyName,
+      address: assertOptionalString(data.address) ?? null,
+      phone: assertOptionalString(data.phone) ?? null,
+      email: assertOptionalString(data.email) ?? null,
+      taxNumber: assertOptionalString(data.taxNumber) ?? null,
+      bankName: assertOptionalString(data.bankName) ?? null,
+      bankAccountNumber: assertOptionalString(data.bankAccountNumber) ?? null,
+      bankBranch: assertOptionalString(data.bankBranch) ?? null,
+      logoUrl: assertOptionalString(data.logoUrl) ?? null,
+      invoiceFooterNote: assertOptionalString(data.invoiceFooterNote) ?? null,
+      defaultIdleWarnPct: assertOptionalNumericString(data.defaultIdleWarnPct) ?? null,
+      defaultIdleCriticalPct: assertOptionalNumericString(data.defaultIdleCriticalPct) ?? null,
+      defaultFuelVariancePct: assertOptionalNumericString(data.defaultFuelVariancePct) ?? null,
+      updatedAt: new Date(),
+    };
 
-  if (existing) {
-    await db
-      .update(companySettings)
-      .set(values)
-      .where(eq(companySettings.id, existing.id));
-  } else {
-    await db.insert(companySettings).values(values);
-  }
+    if (existing) {
+      await tx
+        .update(companySettings)
+        .set(values)
+        .where(eq(companySettings.id, existing.id));
+    } else {
+      await tx.insert(companySettings).values(values);
+    }
+  });
 
   revalidatePath("/admin/settings");
 }
