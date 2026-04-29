@@ -1,0 +1,49 @@
+# Postgres Role Setup (Wave 2.0)
+
+Two roles required for RLS to work safely:
+
+| Role | Properties | Used by |
+|------|------------|---------|
+| jpr_app | LOGIN NOSUPERUSER NOBYPASSRLS | runtime, src/db/index.ts |
+| jpr_migrator | LOGIN NOSUPERUSER BYPASSRLS | drizzle-kit migrate/push, src/db/seed.ts |
+
+## Provisioning SQL (run once per environment as a superuser)
+
+```sql
+CREATE ROLE jpr_app LOGIN NOSUPERUSER NOBYPASSRLS PASSWORD '...';
+CREATE ROLE jpr_migrator LOGIN NOSUPERUSER BYPASSRLS PASSWORD '...';
+GRANT CONNECT ON DATABASE jpr TO jpr_app, jpr_migrator;
+GRANT USAGE ON SCHEMA public TO jpr_app;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO jpr_app;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+  GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO jpr_app;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO jpr_app;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO jpr_app;
+GRANT EXECUTE ON FUNCTION app_user_id(), app_user_role(), app_operator_staff_id()
+  TO jpr_app, jpr_migrator;
+GRANT ALL ON SCHEMA public TO jpr_migrator;
+```
+
+> The `app_user_id()`, `app_user_role()`, and `app_operator_staff_id()` functions are created
+> by the RLS policies migration (see PR 2.0a, Task A5). The grant statements above will fail
+> if run before that migration; run them in this order: (1) create roles, (2) apply migrations
+> as `jpr_migrator`, (3) run the GRANT EXECUTE block above.
+
+## Verification
+
+```sql
+SELECT rolname, rolsuper, rolbypassrls FROM pg_roles
+WHERE rolname IN ('jpr_app', 'jpr_migrator');
+```
+
+Expected:
+- jpr_app: rolsuper=f, rolbypassrls=f
+- jpr_migrator: rolsuper=f, rolbypassrls=t
+
+## Local dev escape hatch
+
+For local development you may set `MIGRATION_DATABASE_URL` to the same value as `DATABASE_URL`
+(both running as the docker-compose `jpr` superuser). `drizzle.config.ts` and `seed.ts` will
+fall back to `DATABASE_URL` if `MIGRATION_DATABASE_URL` is unset and `NODE_ENV !== "production"`.
+This convenience does NOT apply in production — `drizzle.config.ts` throws if
+`MIGRATION_DATABASE_URL` is missing in prod.
