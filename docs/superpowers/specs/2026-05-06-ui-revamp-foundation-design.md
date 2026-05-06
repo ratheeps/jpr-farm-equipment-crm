@@ -6,7 +6,7 @@
 
 ## Context
 
-The Giftbee JPR app serves Sri Lankan agri-business users: non-technical, low-literacy field operators on Android phones in poor connectivity, plus a boss who reads financial truth and operations leaders who run day-to-day work. The current UI works but does not feel native-mobile, lists lack quick actions, and the boss has no consolidated insights view.
+The JPR app serves Sri Lankan agri-business users: non-technical, low-literacy field operators on Android phones in poor connectivity, plus a boss who reads financial truth and operations leaders who run day-to-day work. The current UI works but does not feel native-mobile, lists lack quick actions, and the boss has no consolidated insights view.
 
 This spec covers the **design system foundation only**. Per-role page revamps (operator, owner, admin, finance, auditor) and the login screen are deferred to follow-up sub-specs that consume this foundation. All sub-specs ship together as one big-bang release on the `ui-revamp` branch.
 
