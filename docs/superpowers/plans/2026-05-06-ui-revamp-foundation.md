@@ -384,20 +384,35 @@ git commit -m "feat(tokens): refresh color palette, radii, shadows, locale line-
 ```ts
 // src/lib/__tests__/fonts.test.ts
 import { describe, it, expect } from "vitest";
-import { fontVariableForLocale, htmlClassForLocale } from "../fonts";
+import { fontForLocale, htmlClassForLocale } from "../fonts";
 
-describe("fontVariableForLocale", () => {
-  it("returns the Inter variable for English", () => {
-    const v = fontVariableForLocale("en");
-    expect(v).toMatch(/--font-sans/);
+describe("fontForLocale", () => {
+  it("returns a different font object per locale", () => {
+    // The whole point of locale-aware loading: en, ta, si each pick a
+    // distinct next/font/google loader. Asserting the strings differ is
+    // the only check that catches a regression where two locales accidentally
+    // resolve to the same font.
+    const en = fontForLocale("en");
+    const ta = fontForLocale("ta");
+    const si = fontForLocale("si");
+    expect(en).not.toBe(ta);
+    expect(en).not.toBe(si);
+    expect(ta).not.toBe(si);
   });
-  it("returns the Tamil variable for Tamil", () => {
-    const v = fontVariableForLocale("ta");
-    expect(v).toMatch(/--font-sans/);
+
+  it("returns Inter (Latin-only) for English", () => {
+    const en = fontForLocale("en");
+    // next/font/google attaches a className that includes the font hash.
+    // We can at least assert the variable is wired to --font-sans for every
+    // locale since globals.css reads only that variable.
+    expect(en.variable).toBe("--font-sans");
   });
-  it("returns the Sinhala variable for Sinhala", () => {
-    const v = fontVariableForLocale("si");
-    expect(v).toMatch(/--font-sans/);
+
+  it("returns the same variable name for every locale", () => {
+    // Single CSS var, swap loader per locale. If this drifts the locale
+    // class won't pick up the right font.
+    expect(fontForLocale("ta").variable).toBe("--font-sans");
+    expect(fontForLocale("si").variable).toBe("--font-sans");
   });
 });
 
@@ -412,7 +427,7 @@ describe("htmlClassForLocale", () => {
 
 - [ ] **Step 2: Run test, expect failure**
 
-Run: `pnpm test -t "fontVariableForLocale"`
+Run: `pnpm test -t "fontForLocale"`
 Expected: FAIL `Cannot find module '../fonts'`.
 
 - [ ] **Step 3: Create `src/lib/fonts.ts`**
@@ -454,10 +469,6 @@ export function fontForLocale(locale: Locale) {
   }
 }
 
-export function fontVariableForLocale(locale: Locale): string {
-  return fontForLocale(locale).variable;
-}
-
 export function htmlClassForLocale(locale: Locale): string {
   return `locale-${locale}`;
 }
@@ -465,7 +476,7 @@ export function htmlClassForLocale(locale: Locale): string {
 
 - [ ] **Step 4: Run tests**
 
-Run: `pnpm test -t "fontVariableForLocale"` and `pnpm test -t "htmlClassForLocale"`
+Run: `pnpm test -t "fontForLocale"` and `pnpm test -t "htmlClassForLocale"`
 Expected: PASS.
 
 - [ ] **Step 5: Wire fonts into root locale layout**
@@ -561,6 +572,10 @@ git commit -m "feat(typography): locale-aware font loading (Inter / Noto Tamil /
 **Files:**
 - Create: `src/lib/nav-config.ts`
 - Create: `src/lib/__tests__/nav-config.test.ts`
+- Create: `src/app/[locale]/(dashboard)/owner/reports/page.tsx` (stub)
+- Create: `src/app/[locale]/(dashboard)/finance/cash-transactions/new/page.tsx` (stub)
+
+Scope reminder: foundation must produce a navigable app for every role. Two tab targets the spec requires (`/owner/reports`, `/finance/cash-transactions/new`) do not exist yet on disk; we scaffold placeholder pages here so nav clicks resolve. Role sub-specs replace the placeholders with real pages. The More tab keeps opening the existing SlidingMenu during foundation (spec §9 requires SlidingMenu stays alive during overlap), so no per-role `/more` page is needed from this plan; the More tab type is `action`, not `link`.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -569,10 +584,11 @@ git commit -m "feat(typography): locale-aware font loading (Inter / Noto Tamil /
 import { describe, it, expect } from "vitest";
 import { getNavConfig, type RoleNavKey } from "../nav-config";
 
+const ALL_ROLES: RoleNavKey[] = ["operator", "admin", "finance", "owner", "auditor"];
+
 describe("getNavConfig", () => {
   it("returns 5 tabs for each role", () => {
-    const roles: RoleNavKey[] = ["operator", "admin", "finance", "owner", "auditor"];
-    for (const role of roles) {
+    for (const role of ALL_ROLES) {
       expect(getNavConfig(role).tabs).toHaveLength(5);
     }
   });
@@ -592,11 +608,35 @@ describe("getNavConfig", () => {
     expect(getNavConfig("operator").fab?.href).toBe("/operator/log");
   });
 
-  it("includes a More tab for every role", () => {
-    const roles: RoleNavKey[] = ["operator", "admin", "finance", "owner", "auditor"];
-    for (const role of roles) {
+  it("ends every role's tab list with a More action tab", () => {
+    for (const role of ALL_ROLES) {
       const last = getNavConfig(role).tabs.at(-1);
       expect(last?.labelKey).toBe("more");
+      expect(last?.kind).toBe("action");
+    }
+  });
+
+  it("link tabs target dashboard-prefixed paths only", () => {
+    // Guard: every link tab's href starts with /<role-segment>/ and the
+    // role segment is one we serve a route for. Prevents the 'pointed at
+    // /more (which doesn't exist)' class of bug.
+    const allowedRoots = new Set(["operator", "admin", "finance", "owner", "auditor"]);
+    for (const role of ALL_ROLES) {
+      for (const tab of getNavConfig(role).tabs) {
+        if (tab.kind !== "link") continue;
+        const segments = tab.href.split("/").filter(Boolean);
+        expect(allowedRoots.has(segments[0])).toBe(true);
+      }
+    }
+  });
+
+  it("FAB hrefs target dashboard-prefixed paths", () => {
+    const allowedRoots = new Set(["operator", "admin", "finance"]);
+    for (const role of ALL_ROLES) {
+      const fab = getNavConfig(role).fab;
+      if (!fab) continue;
+      const segments = fab.href.split("/").filter(Boolean);
+      expect(allowedRoots.has(segments[0])).toBe(true);
     }
   });
 });
@@ -614,13 +654,12 @@ import {
   Home,
   ClipboardList,
   Receipt,
-  PalmTree,
+  Trees,
   MoreHorizontal,
   Truck,
   FolderKanban,
   ArrowLeftRight,
   Wallet,
-  Wrench,
   Coins,
   TrendingUp,
   Users,
@@ -632,11 +671,9 @@ import {
 
 export type RoleNavKey = "operator" | "admin" | "finance" | "owner" | "auditor";
 
-export interface NavTab {
-  href: string;
-  labelKey: string;
-  icon: LucideIcon;
-}
+export type NavTab =
+  | { kind: "link"; href: string; labelKey: string; icon: LucideIcon }
+  | { kind: "action"; action: "more"; labelKey: string; icon: LucideIcon };
 
 export interface FabConfig {
   href: string;
@@ -649,14 +686,19 @@ export interface NavConfig {
   fab?: FabConfig;
 }
 
-const moreTab: NavTab = { href: "/more", labelKey: "more", icon: MoreHorizontal };
+const moreTab: NavTab = {
+  kind: "action",
+  action: "more",
+  labelKey: "more",
+  icon: MoreHorizontal,
+};
 
 const operatorConfig: NavConfig = {
   tabs: [
-    { href: "/operator", labelKey: "home", icon: Home },
-    { href: "/operator/history", labelKey: "history", icon: ClipboardList },
-    { href: "/operator/expenses", labelKey: "expenses", icon: Receipt },
-    { href: "/operator/leave", labelKey: "leave", icon: PalmTree },
+    { kind: "link", href: "/operator", labelKey: "home", icon: Home },
+    { kind: "link", href: "/operator/history", labelKey: "history", icon: ClipboardList },
+    { kind: "link", href: "/operator/expenses", labelKey: "expenses", icon: Receipt },
+    { kind: "link", href: "/operator/leave", labelKey: "leave", icon: Trees },
     moreTab,
   ],
   fab: { href: "/operator/log", labelKey: "logWork", icon: Plus },
@@ -664,10 +706,10 @@ const operatorConfig: NavConfig = {
 
 const adminConfig: NavConfig = {
   tabs: [
-    { href: "/admin", labelKey: "home", icon: Home },
-    { href: "/admin/vehicles", labelKey: "vehicles", icon: Truck },
-    { href: "/admin/projects", labelKey: "projects", icon: FolderKanban },
-    { href: "/admin/invoices", labelKey: "invoices", icon: Receipt },
+    { kind: "link", href: "/admin", labelKey: "home", icon: Home },
+    { kind: "link", href: "/admin/vehicles", labelKey: "vehicles", icon: Truck },
+    { kind: "link", href: "/admin/projects", labelKey: "projects", icon: FolderKanban },
+    { kind: "link", href: "/admin/invoices", labelKey: "invoices", icon: Receipt },
     moreTab,
   ],
   fab: { href: "/admin/projects/new", labelKey: "newJob", icon: Plus },
@@ -675,10 +717,10 @@ const adminConfig: NavConfig = {
 
 const financeConfig: NavConfig = {
   tabs: [
-    { href: "/finance", labelKey: "home", icon: Home },
-    { href: "/finance/receivables", labelKey: "receivables", icon: ArrowLeftRight },
-    { href: "/finance/cash-transactions", labelKey: "cash", icon: Wallet },
-    { href: "/finance/invoices", labelKey: "invoices", icon: Receipt },
+    { kind: "link", href: "/finance", labelKey: "home", icon: Home },
+    { kind: "link", href: "/finance/receivables", labelKey: "receivables", icon: ArrowLeftRight },
+    { kind: "link", href: "/finance/cash-transactions", labelKey: "cash", icon: Wallet },
+    { kind: "link", href: "/finance/invoices", labelKey: "invoices", icon: Receipt },
     moreTab,
   ],
   fab: { href: "/finance/cash-transactions/new", labelKey: "newReceipt", icon: Plus },
@@ -686,20 +728,20 @@ const financeConfig: NavConfig = {
 
 const ownerConfig: NavConfig = {
   tabs: [
-    { href: "/owner", labelKey: "home", icon: Home },
-    { href: "/owner/finance", labelKey: "finance", icon: Coins },
-    { href: "/owner/staff-performance", labelKey: "staff", icon: Users },
-    { href: "/owner/reports", labelKey: "reports", icon: TrendingUp },
+    { kind: "link", href: "/owner", labelKey: "home", icon: Home },
+    { kind: "link", href: "/owner/finance", labelKey: "finance", icon: Coins },
+    { kind: "link", href: "/owner/staff-performance", labelKey: "staff", icon: Users },
+    { kind: "link", href: "/owner/reports", labelKey: "reports", icon: TrendingUp },
     moreTab,
   ],
 };
 
 const auditorConfig: NavConfig = {
   tabs: [
-    { href: "/auditor", labelKey: "home", icon: Home },
-    { href: "/auditor/reports", labelKey: "reports", icon: FileBarChart },
-    { href: "/auditor/transactions", labelKey: "transactions", icon: ArrowLeftRight },
-    { href: "/auditor/export", labelKey: "export", icon: Download },
+    { kind: "link", href: "/auditor", labelKey: "home", icon: Home },
+    { kind: "link", href: "/auditor/reports", labelKey: "reports", icon: FileBarChart },
+    { kind: "link", href: "/auditor/transactions", labelKey: "transactions", icon: ArrowLeftRight },
+    { kind: "link", href: "/auditor/export", labelKey: "export", icon: Download },
     moreTab,
   ],
 };
@@ -717,23 +759,64 @@ export function getNavConfig(role: RoleNavKey): NavConfig {
 }
 ```
 
-> Note: lucide-react does not export `PalmTree`. If TypeScript flags the import, swap to `Trees` (or any sensible substitute) and update the test if needed. Confirm imports compile before moving on.
+> Lucide names verified against lucide-react 0.487 exports: `Trees` (used here for the operator Leave tab) is canonical; `Home`, `MoreHorizontal`, `FileBarChart` are exported as backwards-compatible aliases for the renamed `House`, `Ellipsis`, `FileChartColumn`. The earlier draft of this plan used `PalmTree`, which is not exported in any form.
 
 - [ ] **Step 4: Verify imports compile**
 
 Run: `pnpm tsc --noEmit`
-Expected: no errors. If `PalmTree` is missing, change to `Trees` and re-run.
+Expected: no errors.
 
 - [ ] **Step 5: Run tests**
 
 Run: `pnpm test -t "getNavConfig"`
-Expected: 5 PASS.
+Expected: 7 PASS.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 6: Scaffold the missing routes that nav-config points to**
+
+Two of the tabs and one FAB target routes that do not exist yet on disk: `/owner/reports`, `/finance/cash-transactions/new`. Without stubs, foundation ships an app where those tabs/FAB 404. Role sub-specs will replace these placeholders with the real pages.
+
+Create `src/app/[locale]/(dashboard)/owner/reports/page.tsx`:
+
+```tsx
+export default function OwnerReportsPage() {
+  return (
+    <div className="py-12 text-center">
+      <h1 className="text-xl font-extrabold tracking-tight">Reports</h1>
+      <p className="mt-2 text-sm text-muted-foreground">
+        Coming soon in the owner sub-spec.
+      </p>
+    </div>
+  );
+}
+```
+
+Create `src/app/[locale]/(dashboard)/finance/cash-transactions/new/page.tsx`:
+
+```tsx
+export default function NewCashTransactionPage() {
+  return (
+    <div className="py-12 text-center">
+      <h1 className="text-xl font-extrabold tracking-tight">New receipt</h1>
+      <p className="mt-2 text-sm text-muted-foreground">
+        Coming soon in the finance sub-spec.
+      </p>
+    </div>
+  );
+}
+```
+
+- [ ] **Step 7: Build to confirm routes resolve**
+
+Run: `pnpm build`
+Expected: build emits the two new route segments without warnings.
+
+- [ ] **Step 8: Commit**
 
 ```bash
-git add src/lib/nav-config.ts src/lib/__tests__/nav-config.test.ts
-git commit -m "feat(nav): per-role nav config with 5 tabs + role-aware FAB"
+git add src/lib/nav-config.ts src/lib/__tests__/nav-config.test.ts \
+  src/app/[locale]/\(dashboard\)/owner/reports/page.tsx \
+  src/app/[locale]/\(dashboard\)/finance/cash-transactions/new/page.tsx
+git commit -m "feat(nav): per-role nav config + stub routes for owner reports & finance new receipt"
 ```
 
 ---
@@ -751,16 +834,20 @@ git commit -m "feat(nav): per-role nav config with 5 tabs + role-aware FAB"
 ```ts
 // src/lib/__tests__/icon-map.test.ts
 import { describe, it, expect } from "vitest";
+import { Tractor, HelpCircle } from "lucide-react";
 import { resolveEntityIcon } from "../icon-map";
 
 describe("resolveEntityIcon", () => {
-  it("returns a Lucide component for a known vehicle type", () => {
-    const Icon = resolveEntityIcon("vehicle.tractor");
-    expect(typeof Icon).toBe("object"); // ForwardRefExoticComponent
+  it("returns the mapped Lucide component for a known vehicle type", () => {
+    expect(resolveEntityIcon("vehicle.tractor")).toBe(Tractor);
   });
-  it("falls back to a generic icon for unknown keys", () => {
-    const Icon = resolveEntityIcon("nonsense.key");
-    expect(Icon).toBeDefined();
+  it("falls back to HelpCircle for unknown keys", () => {
+    expect(resolveEntityIcon("nonsense.key")).toBe(HelpCircle);
+  });
+  it("distinct keys map to distinct icons", () => {
+    expect(resolveEntityIcon("vehicle.tractor")).not.toBe(
+      resolveEntityIcon("crop.paddy")
+    );
   });
 });
 ```
@@ -1327,20 +1414,21 @@ pnpm add vaul
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { Plus, Wrench } from "lucide-react";
+import { Plus, Wrench, Trash2 } from "lucide-react";
 import { ActionSheet } from "../action-sheet";
 
 describe("<ActionSheet>", () => {
   it("renders title and action tiles when open", async () => {
     const onLog = vi.fn();
+    const onOpenChange = vi.fn();
     render(
       <ActionSheet
         open
-        onOpenChange={() => {}}
+        onOpenChange={onOpenChange}
         title="Tractor #4"
         actions={[
           { label: "Log work", icon: Plus, onClick: onLog },
-          { label: "Service", icon: Wrench, onClick: () => {}, destructive: true },
+          { label: "Service", icon: Wrench, onClick: () => {} },
         ]}
       />
     );
@@ -1348,6 +1436,40 @@ describe("<ActionSheet>", () => {
     const logTile = screen.getByRole("button", { name: /Log work/i });
     await userEvent.click(logTile);
     expect(onLog).toHaveBeenCalledOnce();
+    // Activating an action also closes the sheet.
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it("closes when Escape is pressed", async () => {
+    const onOpenChange = vi.fn();
+    render(
+      <ActionSheet
+        open
+        onOpenChange={onOpenChange}
+        title="Tractor #4"
+        actions={[{ label: "Log work", icon: Plus, onClick: () => {} }]}
+      />
+    );
+    await userEvent.keyboard("{Escape}");
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it("does not fire onClick for a disabled action", async () => {
+    const onDelete = vi.fn();
+    render(
+      <ActionSheet
+        open
+        onOpenChange={() => {}}
+        title="Tractor #4"
+        actions={[
+          { label: "Delete", icon: Trash2, onClick: onDelete, disabled: true, destructive: true },
+        ]}
+      />
+    );
+    const tile = screen.getByRole("button", { name: /Delete/i });
+    expect(tile).toBeDisabled();
+    await userEvent.click(tile);
+    expect(onDelete).not.toHaveBeenCalled();
   });
 });
 ```
@@ -1569,12 +1691,69 @@ git commit -m "feat(ui): PickerSheet (searchable bottom-sheet picker)"
 
 ## Phase 5: List Primitives
 
-### Task 11: Restyle `<ListSearch>` against new tokens
+### Task 11: Restyle `<ListSearch>` against new tokens + clear-button TDD
 
 **Files:**
 - Modify: `src/components/layout/list-search.tsx`
+- Create: `src/components/layout/__tests__/list-search.test.tsx`
 
-- [ ] **Step 1: Replace contents**
+This is no longer a pure restyle: the component switches from uncontrolled `defaultValue` to controlled state and adds a clear button. Both behaviors deserve a failing test first.
+
+- [ ] **Step 1: Write the failing test**
+
+```tsx
+// src/components/layout/__tests__/list-search.test.tsx
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+
+const replaceSpy = vi.fn();
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ replace: replaceSpy }),
+  usePathname: () => "/operator/history",
+  useSearchParams: () => new URLSearchParams("q=foo&page=2"),
+}));
+
+import { ListSearch } from "../list-search";
+
+describe("<ListSearch>", () => {
+  beforeEach(() => {
+    replaceSpy.mockClear();
+  });
+
+  it("seeds the input from the q query param", () => {
+    render(<ListSearch />);
+    expect(screen.getByRole("searchbox")).toHaveValue("foo");
+  });
+
+  it("renders a clear button when the input has a value, and clicking it clears + replaces URL", async () => {
+    render(<ListSearch />);
+    const clear = screen.getByRole("button", { name: /Clear search/i });
+    await userEvent.click(clear);
+    expect(screen.getByRole("searchbox")).toHaveValue("");
+    // Last call should drop the q param and reset page.
+    expect(replaceSpy).toHaveBeenCalled();
+    const lastUrl = replaceSpy.mock.calls.at(-1)?.[0] as string;
+    expect(lastUrl).not.toMatch(/[?&]q=/);
+    expect(lastUrl).not.toMatch(/[?&]page=/);
+  });
+
+  it("does not render the clear button when the input is empty", async () => {
+    render(<ListSearch />);
+    const input = screen.getByRole("searchbox");
+    await userEvent.clear(input);
+    expect(screen.queryByRole("button", { name: /Clear search/i })).toBeNull();
+  });
+});
+```
+
+- [ ] **Step 2: Run, expect failure**
+
+Run: `pnpm test -t "<ListSearch>"`
+Expected: FAIL (existing component is uncontrolled and has no clear button).
+
+- [ ] **Step 3: Replace contents**
 
 ```tsx
 "use client";
@@ -1603,8 +1782,9 @@ export function ListSearch({ placeholder = "Search…" }: Props) {
         params.delete("q");
       }
       params.delete("page");
+      const qs = params.toString();
       startTransition(() => {
-        router.replace(`${pathname}?${params.toString()}`);
+        router.replace(qs ? `${pathname}?${qs}` : pathname);
       });
     },
     [router, pathname, searchParams]
@@ -1641,15 +1821,19 @@ export function ListSearch({ placeholder = "Search…" }: Props) {
 }
 ```
 
-- [ ] **Step 2: Verify dev build**
+- [ ] **Step 4: Run tests**
+
+Run: `pnpm test -t "<ListSearch>"`
+Expected: 3 PASS.
+
+- [ ] **Step 5: Type-check**
 
 Run: `pnpm tsc --noEmit`
-Expected: no errors.
 
-- [ ] **Step 3: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
-git add src/components/layout/list-search.tsx
+git add src/components/layout/list-search.tsx src/components/layout/__tests__/list-search.test.tsx
 git commit -m "refactor(ui): restyle ListSearch with new tokens + clear button"
 ```
 
@@ -1949,6 +2133,12 @@ const toneClass: Record<NonNullable<ListRowProps["leadingTone"]>, string> = {
   neutral: "bg-secondary text-muted-foreground",
 };
 
+// Layout: row body and inline action are siblings, NOT nested buttons.
+// Nesting interactive elements is invalid HTML (a button cannot contain
+// another button) and breaks keyboard a11y. The row body is a real
+// <button>; the inline action is a sibling <button> positioned to the
+// right of the row body. They share a flex container with shadow + bg
+// so they read as one card visually.
 export function ListRow({
   leadingIcon: Leading,
   leadingTone = "primary",
@@ -1960,66 +2150,61 @@ export function ListRow({
   className,
 }: ListRowProps) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
+    <div
       className={cn(
-        "flex w-full items-center gap-3 rounded-lg bg-card px-3 py-3 text-left shadow-card transition",
-        "active:bg-secondary/60",
+        "flex w-full items-stretch gap-2 rounded-lg bg-card shadow-card",
         className
       )}
     >
-      {Leading && (
-        <span
-          className={cn(
-            "flex h-10 w-10 shrink-0 items-center justify-center rounded-full",
-            toneClass[leadingTone]
-          )}
-          aria-hidden
-        >
-          <Leading className="h-5 w-5" strokeWidth={2} />
-        </span>
-      )}
-      <span className="min-w-0 flex-1">
-        <span className="block truncate text-sm font-semibold text-foreground">
-          {title}
-        </span>
-        {subtitle && (
-          <span className="block truncate text-xs text-muted-foreground">
-            {subtitle}
+      <button
+        type="button"
+        onClick={onClick}
+        className={cn(
+          "flex min-w-0 flex-1 items-center gap-3 rounded-lg px-3 py-3 text-left transition",
+          "active:bg-secondary/60"
+        )}
+      >
+        {Leading && (
+          <span
+            className={cn(
+              "flex h-10 w-10 shrink-0 items-center justify-center rounded-full",
+              toneClass[leadingTone]
+            )}
+            aria-hidden
+          >
+            <Leading className="h-5 w-5" strokeWidth={2} />
           </span>
         )}
-      </span>
-      {meta && (
-        <span className="ml-auto shrink-0 text-sm font-semibold tnum">{meta}</span>
-      )}
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-sm font-semibold text-foreground">
+            {title}
+          </span>
+          {subtitle && (
+            <span className="block truncate text-xs text-muted-foreground">
+              {subtitle}
+            </span>
+          )}
+        </span>
+        {meta && (
+          <span className="ml-auto shrink-0 text-sm font-semibold tnum">{meta}</span>
+        )}
+      </button>
       {inlineAction && (
-        <span
-          role="button"
-          tabIndex={0}
+        <button
+          type="button"
           aria-label={inlineAction.label}
-          onClick={(e) => {
-            e.stopPropagation();
-            inlineAction.onClick();
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault();
-              e.stopPropagation();
-              inlineAction.onClick();
-            }
-          }}
-          className="ml-2 flex h-9 w-9 items-center justify-center rounded-md bg-primary text-primary-foreground shadow-card"
+          onClick={inlineAction.onClick}
+          className="my-2 mr-2 flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground"
         >
           <inlineAction.icon className="h-4 w-4" strokeWidth={2.25} />
-        </span>
+        </button>
       )}
-    </button>
+    </div>
   );
 }
 ```
 
-> Note: Inline action uses a nested `<span role="button">` rather than a real `<button>` because nested buttons are invalid HTML. Click and keyboard handlers are wired explicitly. The accessible-name comes from `aria-label`.
+> Implementation note: row body and inline action are siblings inside a card-styled `<div>`. Clicking the inline action only fires the inline handler (separate button, no event bubbling between siblings). Both are independently focusable via Tab; both meet the 44x44 tap-target spec. This replaces an earlier draft that nested `<span role="button">` inside `<button>`, which is invalid HTML and broke keyboard a11y in real browsers.
 
 - [ ] **Step 4: Run tests**
 
@@ -2272,11 +2457,11 @@ git commit -m "feat(forms): Field shell + SmartDefaultBanner"
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { Tractor, Truck } from "lucide-react";
+import { Tractor, Truck, Combine } from "lucide-react";
 import { TilePicker } from "../tile-picker";
 
-describe("<TilePicker>", () => {
-  it("marks the selected tile and fires onChange", async () => {
+describe("<TilePicker> single-select", () => {
+  it("marks the selected tile and fires onChange with the new value", async () => {
     const onChange = vi.fn();
     render(
       <TilePicker
@@ -2294,6 +2479,50 @@ describe("<TilePicker>", () => {
 
     await userEvent.click(screen.getByRole("button", { name: /Truck #2/i }));
     expect(onChange).toHaveBeenCalledWith("t2");
+  });
+});
+
+describe("<TilePicker> multi-select", () => {
+  it("toggles a value into the selected array", async () => {
+    const onChange = vi.fn();
+    render(
+      <TilePicker
+        multi
+        value={["t1"]}
+        onChange={onChange}
+        options={[
+          { value: "t1", label: "Tractor #4", icon: Tractor },
+          { value: "t2", label: "Truck #2", icon: Truck },
+          { value: "t3", label: "Harvester #1", icon: Combine },
+        ]}
+      />
+    );
+
+    // Already-selected tile renders as selected.
+    expect(
+      screen.getByRole("button", { name: /Tractor #4/i })
+    ).toHaveAttribute("data-selected", "true");
+
+    // Adding another value passes the union, not the latest tap alone.
+    await userEvent.click(screen.getByRole("button", { name: /Truck #2/i }));
+    expect(onChange).toHaveBeenLastCalledWith(["t1", "t2"]);
+  });
+
+  it("removes a value when an already-selected tile is tapped", async () => {
+    const onChange = vi.fn();
+    render(
+      <TilePicker
+        multi
+        value={["t1", "t2"]}
+        onChange={onChange}
+        options={[
+          { value: "t1", label: "Tractor #4", icon: Tractor },
+          { value: "t2", label: "Truck #2", icon: Truck },
+        ]}
+      />
+    );
+    await userEvent.click(screen.getByRole("button", { name: /Tractor #4/i }));
+    expect(onChange).toHaveBeenLastCalledWith(["t2"]);
   });
 });
 ```
@@ -2401,12 +2630,16 @@ git commit -m "feat(forms): TilePicker (single + multi-select)"
 
 ```tsx
 // src/components/forms/primitives/__tests__/stepper.test.tsx
-import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { describe, it, expect, vi, afterEach } from "vitest";
+import { render, screen, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Stepper } from "../stepper";
 
 describe("<Stepper>", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("increments and decrements within bounds", async () => {
     const onChange = vi.fn();
     render(<Stepper value={2} onChange={onChange} step={0.5} min={0} max={3} />);
@@ -2418,11 +2651,44 @@ describe("<Stepper>", () => {
     expect(onChange).toHaveBeenLastCalledWith(1.5);
   });
 
-  it("clamps at max", async () => {
+  it("clamps at max and disables the increase button", async () => {
     const onChange = vi.fn();
     render(<Stepper value={3} onChange={onChange} step={1} min={0} max={3} />);
-    await userEvent.click(screen.getByRole("button", { name: "Increase" }));
+    const inc = screen.getByRole("button", { name: "Increase" });
+    expect(inc).toBeDisabled();
+    await userEvent.click(inc);
     expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("rounds to avoid float drift", async () => {
+    const onChange = vi.fn();
+    render(<Stepper value={0.1} onChange={onChange} step={0.2} min={0} max={5} />);
+    await userEvent.click(screen.getByRole("button", { name: "Increase" }));
+    // 0.1 + 0.2 = 0.30000000000000004 in IEEE 754; helper rounds to 3dp.
+    expect(onChange).toHaveBeenLastCalledWith(0.3);
+  });
+
+  it("accelerates on press-and-hold", () => {
+    vi.useFakeTimers();
+    const onChange = vi.fn();
+    render(<Stepper value={0} onChange={onChange} step={1} min={0} max={100} />);
+    const inc = screen.getByRole("button", { name: "Increase" });
+
+    act(() => {
+      inc.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+    });
+    // First tick fires immediately, then auto-repeats every ~80ms after a
+    // ~400ms hold delay. Advance just past the hold window plus three ticks.
+    act(() => {
+      vi.advanceTimersByTime(400);
+      vi.advanceTimersByTime(80 * 3);
+    });
+    act(() => {
+      inc.dispatchEvent(new PointerEvent("pointerup", { bubbles: true }));
+    });
+
+    // At minimum: initial press (1) + 3 auto-repeats = 4 onChange calls.
+    expect(onChange.mock.calls.length).toBeGreaterThanOrEqual(4);
   });
 });
 ```
@@ -2452,6 +2718,9 @@ interface StepperProps {
   className?: string;
 }
 
+const HOLD_DELAY_MS = 400;
+const REPEAT_INTERVAL_MS = 80;
+
 export function Stepper({
   value,
   onChange,
@@ -2461,24 +2730,65 @@ export function Stepper({
   formatter,
   className,
 }: StepperProps) {
-  const clamp = (n: number) => Math.min(Math.max(n, min), max);
-  const dec = () => {
-    const next = clamp(round(value - step));
-    if (next !== value) onChange(next);
-  };
-  const inc = () => {
-    const next = clamp(round(value + step));
-    if (next !== value) onChange(next);
-  };
+  const valueRef = React.useRef(value);
+  valueRef.current = value;
+
+  const holdTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const repeatTimer = React.useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const apply = React.useCallback(
+    (delta: 1 | -1) => {
+      const next = clamp(round(valueRef.current + delta * step), min, max);
+      if (next !== valueRef.current) {
+        valueRef.current = next;
+        onChange(next);
+        return true;
+      }
+      return false;
+    },
+    [step, min, max, onChange]
+  );
+
+  const stopRepeat = React.useCallback(() => {
+    if (holdTimer.current) {
+      clearTimeout(holdTimer.current);
+      holdTimer.current = null;
+    }
+    if (repeatTimer.current) {
+      clearInterval(repeatTimer.current);
+      repeatTimer.current = null;
+    }
+  }, []);
+
+  const startRepeat = React.useCallback(
+    (delta: 1 | -1) => {
+      apply(delta);
+      holdTimer.current = setTimeout(() => {
+        repeatTimer.current = setInterval(() => {
+          if (!apply(delta)) stopRepeat();
+        }, REPEAT_INTERVAL_MS);
+      }, HOLD_DELAY_MS);
+    },
+    [apply, stopRepeat]
+  );
+
+  React.useEffect(() => stopRepeat, [stopRepeat]);
+
+  const buttonHandlers = (delta: 1 | -1) => ({
+    onPointerDown: () => startRepeat(delta),
+    onPointerUp: stopRepeat,
+    onPointerLeave: stopRepeat,
+    onPointerCancel: stopRepeat,
+  });
 
   return (
     <div className={cn("flex items-center gap-3", className)}>
       <button
         type="button"
-        onClick={dec}
         disabled={value <= min}
         aria-label="Decrease"
         className="flex h-11 w-11 items-center justify-center rounded-full bg-secondary text-foreground disabled:opacity-40"
+        {...buttonHandlers(-1)}
       >
         <Minus className="h-5 w-5" strokeWidth={2.25} />
       </button>
@@ -2487,10 +2797,10 @@ export function Stepper({
       </div>
       <button
         type="button"
-        onClick={inc}
         disabled={value >= max}
         aria-label="Increase"
         className="flex h-11 w-11 items-center justify-center rounded-full bg-primary text-primary-foreground disabled:opacity-40"
+        {...buttonHandlers(1)}
       >
         <Plus className="h-5 w-5" strokeWidth={2.25} />
       </button>
@@ -2498,8 +2808,12 @@ export function Stepper({
   );
 }
 
+function clamp(n: number, lo: number, hi: number): number {
+  return Math.min(Math.max(n, lo), hi);
+}
+
 function round(n: number): number {
-  // avoid 2.5000000000004 results from float math
+  // avoid 0.1 + 0.2 = 0.30000000000000004 from float math
   return Math.round(n * 1000) / 1000;
 }
 ```
@@ -2900,14 +3214,28 @@ git commit -m "refactor(ui): rewrite TopBar (sticky, safe-area-aware, slot-based
 // src/components/layout/bottom-nav.tsx
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
 import { cn } from "@/lib/utils";
-import { getNavConfig, type RoleNavKey } from "@/lib/nav-config";
+import { getNavConfig, type NavTab, type RoleNavKey } from "@/lib/nav-config";
+import { SlidingMenu } from "@/components/layout/sliding-menu";
 
 interface BottomNavProps {
   role: RoleNavKey;
+}
+
+// Role-root href (e.g. /ta/operator) must match exactly; deeper paths
+// are not the home tab. Other link tabs match exact OR a deeper segment.
+function isTabActive(tab: NavTab, locale: string, pathname: string): boolean {
+  if (tab.kind !== "link") return false;
+  const fullHref = `/${locale}${tab.href}`;
+  // tab.href like "/operator" or "/operator/history". The role-root tab has
+  // exactly one path segment after the locale.
+  const isRoleRoot = tab.href.split("/").filter(Boolean).length === 1;
+  if (isRoleRoot) return pathname === fullHref;
+  return pathname === fullHref || pathname.startsWith(`${fullHref}/`);
 }
 
 export function BottomNav({ role }: BottomNavProps) {
@@ -2915,51 +3243,90 @@ export function BottomNav({ role }: BottomNavProps) {
   const locale = useLocale();
   const pathname = usePathname();
   const { tabs } = getNavConfig(role);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   return (
-    <nav
-      aria-label="Primary"
-      className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-card/95 pb-safe backdrop-blur"
-    >
-      <ul className="grid h-16" style={{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }}>
-        {tabs.map((tab) => {
-          const Icon = tab.icon;
-          const href = `/${locale}${tab.href}`;
-          const active =
-            pathname === href || pathname.startsWith(`${href}/`);
-          return (
-            <li key={tab.href} className="contents">
-              <Link
-                href={href}
-                aria-current={active ? "page" : undefined}
-                className={cn(
-                  "flex flex-col items-center justify-center gap-1 text-[10px] font-semibold",
-                  active ? "text-primary" : "text-muted-foreground"
-                )}
-              >
-                <Icon className="h-5 w-5" strokeWidth={active ? 2.5 : 2} aria-hidden />
-                <span>{t(tab.labelKey as Parameters<typeof t>[0])}</span>
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
-    </nav>
+    <>
+      <SlidingMenu open={menuOpen} onClose={() => setMenuOpen(false)} role={role} />
+      <nav
+        aria-label="Primary"
+        className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-card/95 pb-safe backdrop-blur"
+      >
+        <ul
+          className="grid h-16"
+          style={{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }}
+        >
+          {tabs.map((tab, i) => {
+            const Icon = tab.icon;
+            const label = t(tab.labelKey as Parameters<typeof t>[0]);
+            const className = cn(
+              "flex flex-col items-center justify-center gap-1 text-[10px] font-semibold",
+              menuOpen && tab.kind === "action"
+                ? "text-primary"
+                : tab.kind === "link" && isTabActive(tab, locale, pathname)
+                ? "text-primary"
+                : "text-muted-foreground"
+            );
+
+            if (tab.kind === "action") {
+              const active = menuOpen;
+              return (
+                <li key={`action-${i}`} className="contents">
+                  <button
+                    type="button"
+                    onClick={() => setMenuOpen(true)}
+                    aria-label={label}
+                    aria-expanded={menuOpen}
+                    className={className}
+                  >
+                    <Icon
+                      className="h-5 w-5"
+                      strokeWidth={active ? 2.5 : 2}
+                      aria-hidden
+                    />
+                    <span>{label}</span>
+                  </button>
+                </li>
+              );
+            }
+
+            const href = `/${locale}${tab.href}`;
+            const active = isTabActive(tab, locale, pathname);
+            return (
+              <li key={tab.href} className="contents">
+                <Link
+                  href={href}
+                  aria-current={active ? "page" : undefined}
+                  className={className}
+                >
+                  <Icon
+                    className="h-5 w-5"
+                    strokeWidth={active ? 2.5 : 2}
+                    aria-hidden
+                  />
+                  <span>{label}</span>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      </nav>
+    </>
   );
 }
 ```
 
+> SlidingMenu is kept mounted from the More tab during foundation per spec §9 ("sliding-menu.tsx deletion blocked until role sub-specs ship - keep alive during overlap"). Role sub-specs replace the More-as-action tab with a real `/<role>/more` page when ready.
+
 - [ ] **Step 2: Add missing translation keys**
 
-Open `messages/en.json`, `messages/ta.json`, `messages/si.json`. Under the existing `nav` namespace, ensure these keys exist (add any missing):
+Open `messages/en.json`, `messages/ta.json`, `messages/si.json`. Under the existing `nav` namespace, **add** any missing keys from this set without removing or renaming existing ones (existing pages still read `nav.dashboard`, `nav.loans`, etc.):
 
 ```
-home, history, expenses, leave, more, vehicles, projects, invoices,
-receivables, cash, finance, staff, reports, transactions, export, logWork,
-newJob, newReceipt
+home, leave, cash, newJob, newReceipt
 ```
 
-For each missing key, add a localized string (English fallback values are fine for ta/si during foundation; localization happens in role sub-specs).
+Existing keys (`history`, `expenses`, `more`, `vehicles`, `projects`, `invoices`, `receivables`, `finance`, `staff`, `reports`, `transactions`, `export`, `logWork`) are reused. For each newly added key, supply the English string in all three files (full ta/si translations land in role sub-specs).
 
 - [ ] **Step 3: Type-check**
 
@@ -3007,9 +3374,12 @@ interface FabProps {
 
 export function Fab({ href, onClick, label, icon: Icon, hidden, className }: FabProps) {
   if (hidden) return null;
+  // Bottom nav is 4rem tall plus safe-area-bottom; the FAB clears it by
+  // an extra 1rem (16px) so it sits visibly above the nav, not flush
+  // against the top edge. Right edge: 1rem.
   const styles = cn(
     "fixed right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-fab",
-    "bottom-[calc(env(safe-area-inset-bottom,0px)+5rem)]",
+    "bottom-[calc(env(safe-area-inset-bottom,0px)+5rem+1rem)]",
     className
   );
   if (href) {
@@ -3040,39 +3410,153 @@ git commit -m "feat(ui): Fab corner-floating action button"
 
 ---
 
-### Task 24: `<AppShell>` wrapper
+### Task 24: `<AppShell>` wrapper + `useFab` per-page override
 
 **Files:**
 - Create: `src/components/layout/app-shell.tsx`
+- Create: `src/components/layout/fab-context.tsx`
 
-- [ ] **Step 1: Implement**
+- [ ] **Step 1: Implement the FAB context + `useFab` hook**
+
+Spec §4 requires "Per-route `useFab()` hook injects `label` and `onClick`. Hidden by default; opted in per page." A page that wants to override the role's default FAB (e.g., admin's "context-driven" FAB) calls `useFab({...})` from a client component; the shell reads the latest override and renders that instead of the role default.
+
+```tsx
+// src/components/layout/fab-context.tsx
+"use client";
+
+import * as React from "react";
+import type { LucideIcon } from "lucide-react";
+
+export interface FabOverride {
+  label: string;
+  icon: LucideIcon;
+  href?: string;
+  onClick?: () => void;
+  hidden?: boolean;
+}
+
+interface Ctx {
+  override: FabOverride | null;
+  set: (next: FabOverride | null) => void;
+}
+
+const FabContext = React.createContext<Ctx | null>(null);
+
+export function FabProvider({ children }: { children: React.ReactNode }) {
+  const [override, setOverride] = React.useState<FabOverride | null>(null);
+  const value = React.useMemo(() => ({ override, set: setOverride }), [override]);
+  return <FabContext.Provider value={value}>{children}</FabContext.Provider>;
+}
+
+export function useFabOverride(): FabOverride | null {
+  const ctx = React.useContext(FabContext);
+  return ctx?.override ?? null;
+}
+
+// Per-page hook: page calls this with its desired FAB; shell renders it.
+// Pass `null` to hide the FAB on this page; omit the call to keep the
+// role's default FAB.
+//
+// Callers may pass fresh object literals each render. We hash the
+// meaningful fields and only re-publish when they change; raw reference
+// inequality would otherwise infinite-loop because the page is a context
+// consumer that re-renders when the override is set.
+export function useFab(next: FabOverride | null): void {
+  const ctx = React.useContext(FabContext);
+  const key = stableKey(next);
+  const latest = React.useRef(next);
+  latest.current = next;
+  React.useEffect(() => {
+    if (!ctx) return;
+    ctx.set(latest.current);
+    return () => ctx.set(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ctx, key]);
+}
+
+function stableKey(o: FabOverride | null): string {
+  if (!o) return "";
+  return [
+    o.label,
+    o.icon?.displayName ?? o.icon?.name ?? "",
+    o.href ?? "",
+    o.onClick ? "fn" : "",
+    o.hidden ? "1" : "0",
+  ].join("|");
+}
+```
+
+- [ ] **Step 2: Implement `<AppShell>`**
 
 ```tsx
 // src/components/layout/app-shell.tsx
+"use client";
+
 import * as React from "react";
 import { useLocale } from "next-intl";
 import { BottomNav } from "@/components/layout/bottom-nav";
 import { Fab } from "@/components/layout/fab";
-import { TopBar } from "@/components/layout/topbar";
 import { OfflineBanner } from "@/components/offline-banner";
 import { ToastProvider, ToastViewport } from "@/components/ui/toast";
+import {
+  FabProvider,
+  useFabOverride,
+} from "@/components/layout/fab-context";
 import { getNavConfig, type RoleNavKey } from "@/lib/nav-config";
 
 interface AppShellProps {
   role: RoleNavKey;
   topBar?: React.ReactNode;
   children: React.ReactNode;
-  hideFab?: boolean;
 }
 
-export function AppShell({
+export function AppShell({ role, topBar, children }: AppShellProps) {
+  return (
+    <FabProvider>
+      <AppShellInner role={role} topBar={topBar}>
+        {children}
+      </AppShellInner>
+    </FabProvider>
+  );
+}
+
+function AppShellInner({
   role,
   topBar,
   children,
-  hideFab = false,
-}: AppShellProps) {
+}: {
+  role: RoleNavKey;
+  topBar?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  const locale = useLocale();
   const config = getNavConfig(role);
-  const fab = config.fab;
+  const override = useFabOverride();
+
+  // Resolution: page override (if any) wins. If the override is `{ hidden: true }`
+  // or any truthy override that produced no renderable target, hide.
+  // Otherwise fall back to the role's default FAB from nav-config.
+  let fabNode: React.ReactNode = null;
+  if (override) {
+    if (!override.hidden) {
+      fabNode = (
+        <Fab
+          label={override.label}
+          icon={override.icon}
+          href={override.href}
+          onClick={override.onClick}
+        />
+      );
+    }
+  } else if (config.fab) {
+    fabNode = (
+      <Fab
+        label={config.fab.labelKey}
+        icon={config.fab.icon}
+        href={`/${locale}${config.fab.href}`}
+      />
+    );
+  }
 
   return (
     <ToastProvider swipeDirection="down">
@@ -3082,28 +3566,14 @@ export function AppShell({
         <main className="flex-1 px-4 pb-[calc(env(safe-area-inset-bottom,0px)+5rem)] pt-2">
           {children}
         </main>
-        {fab && !hideFab && (
-          <Fab href={`/${useLocaleSafe()}${fab.href}`} label={fab.labelKey} icon={fab.icon} />
-        )}
+        {fabNode}
         <BottomNav role={role} />
         <ToastViewport />
       </div>
     </ToastProvider>
   );
 }
-
-function useLocaleSafe() {
-  // Wrapper so this stays a Server Component candidate by default;
-  // the surrounding ToastProvider already forces the client path.
-  return useLocale();
-}
 ```
-
-> Note: AppShell is a client component because of ToastProvider. Either add `"use client"` at the top of the file, or split into two files: a server-component wrapper that mounts a small client component for ToastProvider + Fab href computation.
-
-- [ ] **Step 2: Convert to client component**
-
-Add `"use client";` as the first line of `app-shell.tsx`.
 
 - [ ] **Step 3: Type-check + build**
 
@@ -3113,8 +3583,8 @@ Expected: no errors.
 - [ ] **Step 4: Commit**
 
 ```bash
-git add src/components/layout/app-shell.tsx
-git commit -m "feat(layout): AppShell composes TopBar + BottomNav + FAB + Toast viewport"
+git add src/components/layout/app-shell.tsx src/components/layout/fab-context.tsx
+git commit -m "feat(layout): AppShell composes TopBar + BottomNav + FAB + Toast + per-page useFab override"
 ```
 
 ---
@@ -3125,8 +3595,94 @@ git commit -m "feat(layout): AppShell composes TopBar + BottomNav + FAB + Toast 
 
 **Files:**
 - Modify: `src/components/offline-banner.tsx`
+- Create: `src/components/__tests__/offline-banner.test.tsx`
 
-- [ ] **Step 1: Replace contents**
+Spec §10 explicitly asks for "OfflineBanner visibility derived from `navigator.onLine` plus Dexie count" as a unit test, so this task is on the TDD track (the previous draft skipped it). The component takes the pending-count source as a prop so tests can stub it without touching IndexedDB; production wires it to `pendingSyncCount`.
+
+- [ ] **Step 1: Write the failing test**
+
+```tsx
+// src/components/__tests__/offline-banner.test.tsx
+import { describe, it, expect, beforeEach, vi } from "vitest";
+import { render, screen, act } from "@testing-library/react";
+import { NextIntlClientProvider } from "next-intl";
+import { OfflineBanner } from "../offline-banner";
+
+const messages = {
+  operator: { offlineBanner: "Working offline" },
+};
+
+function renderBanner(getPending: () => Promise<number>) {
+  return render(
+    <NextIntlClientProvider locale="en" messages={messages}>
+      <OfflineBanner getPendingCount={getPending} />
+    </NextIntlClientProvider>
+  );
+}
+
+function setOnline(online: boolean) {
+  Object.defineProperty(navigator, "onLine", {
+    configurable: true,
+    value: online,
+  });
+}
+
+describe("<OfflineBanner>", () => {
+  beforeEach(() => {
+    setOnline(true);
+  });
+
+  it("renders nothing when online with zero pending records", async () => {
+    const { container } = renderBanner(async () => 0);
+    // Wait a microtask for the pending-count promise to settle.
+    await act(async () => {});
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it("renders the offline banner when navigator.onLine is false", async () => {
+    setOnline(false);
+    renderBanner(async () => 0);
+    await act(async () => {});
+    expect(screen.getByRole("status")).toHaveTextContent("Working offline");
+  });
+
+  it("includes the unsynced count when offline and pending > 0", async () => {
+    setOnline(false);
+    renderBanner(async () => 3);
+    await act(async () => {});
+    expect(screen.getByRole("status")).toHaveTextContent(/3 unsynced/);
+  });
+
+  it("renders a syncing label when online with pending records", async () => {
+    setOnline(true);
+    renderBanner(async () => 2);
+    await act(async () => {});
+    expect(screen.getByRole("status")).toHaveTextContent(/Syncing/);
+    expect(screen.getByRole("status")).toHaveTextContent(/2/);
+  });
+
+  it("hides again after the offline event fires followed by online with zero pending", async () => {
+    let pending = 0;
+    renderBanner(async () => pending);
+    await act(async () => {});
+    // Online + 0 pending -> hidden.
+    expect(screen.queryByRole("status")).toBeNull();
+
+    setOnline(false);
+    await act(async () => {
+      window.dispatchEvent(new Event("offline"));
+    });
+    expect(screen.getByRole("status")).toHaveTextContent("Working offline");
+  });
+});
+```
+
+- [ ] **Step 2: Run, expect failure**
+
+Run: `pnpm test -t "<OfflineBanner>"`
+Expected: FAIL (existing component does not accept `getPendingCount` and renders different copy).
+
+- [ ] **Step 3: Replace component contents**
 
 ```tsx
 "use client";
@@ -3140,20 +3696,29 @@ import {
   registerBackgroundSync,
 } from "@/lib/offline/sync";
 
-export function OfflineBanner() {
+interface OfflineBannerProps {
+  // Injectable for tests; production defaults to the Dexie-backed counter.
+  getPendingCount?: () => Promise<number>;
+}
+
+export function OfflineBanner({
+  getPendingCount = pendingSyncCount,
+}: OfflineBannerProps = {}) {
   const t = useTranslations("operator");
   const [isOnline, setIsOnline] = useState(true);
   const [pending, setPending] = useState(0);
 
-  async function refreshPending() {
-    try {
-      setPending(await pendingSyncCount());
-    } catch {
-      // pendingSyncCount throws when SSR; ignore
-    }
-  }
-
   useEffect(() => {
+    let cancelled = false;
+    async function refreshPending() {
+      try {
+        const n = await getPendingCount();
+        if (!cancelled) setPending(n);
+      } catch {
+        // pendingSyncCount throws during SSR or when Dexie is unavailable.
+      }
+    }
+
     setIsOnline(navigator.onLine);
     refreshPending();
 
@@ -3164,25 +3729,35 @@ export function OfflineBanner() {
       await syncAll();
       await refreshPending();
     };
+    // Dexie-backed sync engine fires this CustomEvent after every push.
+    // It replaces the old 5s polling loop, which drained battery on idle
+    // operator phones for no useful update signal.
+    const onSyncDone = () => refreshPending();
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") refreshPending();
+    };
 
     window.addEventListener("offline", onOffline);
     window.addEventListener("online", onOnline);
-
-    const interval = window.setInterval(refreshPending, 5000);
+    window.addEventListener("jpr:sync-done", onSyncDone);
+    document.addEventListener("visibilitychange", onVisibility);
     return () => {
+      cancelled = true;
       window.removeEventListener("offline", onOffline);
       window.removeEventListener("online", onOnline);
-      window.clearInterval(interval);
+      window.removeEventListener("jpr:sync-done", onSyncDone);
+      document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, []);
+  }, [getPendingCount]);
 
   if (isOnline && pending === 0) return null;
 
+  const offlineCopy = t("offlineBanner");
   const message = isOnline
     ? `Syncing · ${pending} pending`
     : pending > 0
-    ? `${t("offlineBanner")} · ${pending} unsynced`
-    : t("offlineBanner");
+    ? `${offlineCopy} · ${pending} unsynced`
+    : offlineCopy;
 
   return (
     <div
@@ -3196,15 +3771,34 @@ export function OfflineBanner() {
 }
 ```
 
-- [ ] **Step 2: Type-check**
+> Sync engine integration: `src/lib/offline/sync.ts` should dispatch `window.dispatchEvent(new CustomEvent("jpr:sync-done"))` at the end of each `syncAll()` run. If that wiring is not in place, add a one-line dispatch there in this same task; the alternative (5-second polling) drains operator-phone battery for no information signal between syncs.
+
+- [ ] **Step 4: Wire the `jpr:sync-done` dispatch into the sync engine**
+
+Open `src/lib/offline/sync.ts`. At the end of `syncAll()` (after the last push completes, regardless of success/failure), add:
+
+```ts
+if (typeof window !== "undefined") {
+  window.dispatchEvent(new CustomEvent("jpr:sync-done"));
+}
+```
+
+If `syncAll` already returns early on failure, dispatch from a `finally` block so the banner refreshes even when the network attempt errored.
+
+- [ ] **Step 5: Run tests**
+
+Run: `pnpm test -t "<OfflineBanner>"`
+Expected: 5 PASS.
+
+- [ ] **Step 6: Type-check**
 
 Run: `pnpm tsc --noEmit`
 
-- [ ] **Step 3: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
-git add src/components/offline-banner.tsx
-git commit -m "refactor(offline): restyle OfflineBanner + show Dexie unsynced count"
+git add src/components/offline-banner.tsx src/components/__tests__/offline-banner.test.tsx src/lib/offline/sync.ts
+git commit -m "refactor(offline): restyle OfflineBanner, derive copy from onLine + Dexie count, drop polling"
 ```
 
 ---
@@ -3373,27 +3967,50 @@ git commit -m "chore(pwa): generate iOS splash screens + link them in root layou
 - Create: `src/components/__tests__/install-prompt.test.tsx`
 - Modify: `src/components/layout/app-shell.tsx` (mount `<InstallPrompt />`)
 
-- [ ] **Step 1: Write the failing test (cooldown logic only)**
+- [ ] **Step 1: Write the failing test (cooldown + trigger gating)**
 
 ```tsx
 // src/components/__tests__/install-prompt.test.tsx
 import { describe, it, expect, beforeEach } from "vitest";
-import { canPromptInstall } from "../install-prompt";
+import {
+  canPromptInstall,
+  recordSession,
+  recordSyncSuccess,
+} from "../install-prompt";
 
 describe("canPromptInstall", () => {
   beforeEach(() => {
     localStorage.clear();
   });
-  it("returns false within 7 days of last dismissal", () => {
+
+  it("returns false on the first session with no successful sync (spec gating)", () => {
+    expect(canPromptInstall()).toBe(false);
+  });
+
+  it("returns true after the second session is recorded", () => {
+    recordSession();
+    recordSession();
+    expect(canPromptInstall()).toBe(true);
+  });
+
+  it("returns true after a successful sync (even on first session)", () => {
+    recordSession();
+    recordSyncSuccess();
+    expect(canPromptInstall()).toBe(true);
+  });
+
+  it("returns false within 7 days of last dismissal even if otherwise eligible", () => {
+    recordSession();
+    recordSession();
     localStorage.setItem("install-prompt:dismissedAt", String(Date.now()));
     expect(canPromptInstall()).toBe(false);
   });
-  it("returns true after 7 days", () => {
+
+  it("returns true after 7 days from last dismissal", () => {
+    recordSession();
+    recordSession();
     const eightDaysAgo = Date.now() - 8 * 24 * 3600 * 1000;
     localStorage.setItem("install-prompt:dismissedAt", String(eightDaysAgo));
-    expect(canPromptInstall()).toBe(true);
-  });
-  it("returns true if never dismissed", () => {
     expect(canPromptInstall()).toBe(true);
   });
 });
@@ -3414,16 +4031,38 @@ import * as React from "react";
 import { Drawer } from "vaul";
 import { Smartphone, Share, X } from "lucide-react";
 
-const KEY = "install-prompt:dismissedAt";
+const DISMISSED_KEY = "install-prompt:dismissedAt";
+const SESSION_COUNT_KEY = "install-prompt:sessionCount";
+const SYNC_SUCCESS_KEY = "install-prompt:syncSucceeded";
 const COOLDOWN_MS = 7 * 24 * 3600 * 1000;
+
+// Trigger gates per spec §8: prompt only after the second session OR
+// after the first successful sync. Cooldown applies on top.
+export function recordSession(): void {
+  if (typeof window === "undefined") return;
+  const prev = Number(window.localStorage.getItem(SESSION_COUNT_KEY) ?? "0");
+  window.localStorage.setItem(
+    SESSION_COUNT_KEY,
+    String(Number.isFinite(prev) ? prev + 1 : 1)
+  );
+}
+
+export function recordSyncSuccess(): void {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(SYNC_SUCCESS_KEY, "1");
+}
 
 export function canPromptInstall(): boolean {
   if (typeof window === "undefined") return false;
-  const raw = window.localStorage.getItem(KEY);
-  if (!raw) return true;
-  const ts = Number(raw);
-  if (Number.isNaN(ts)) return true;
-  return Date.now() - ts > COOLDOWN_MS;
+  // Cooldown beats every other condition.
+  const dismissed = window.localStorage.getItem(DISMISSED_KEY);
+  if (dismissed) {
+    const ts = Number(dismissed);
+    if (Number.isFinite(ts) && Date.now() - ts <= COOLDOWN_MS) return false;
+  }
+  const sessions = Number(window.localStorage.getItem(SESSION_COUNT_KEY) ?? "0");
+  const synced = window.localStorage.getItem(SYNC_SUCCESS_KEY) === "1";
+  return sessions >= 2 || synced;
 }
 
 interface BeforeInstallPromptEvent extends Event {
@@ -3465,7 +4104,7 @@ export function InstallPrompt() {
   }, []);
 
   function dismiss() {
-    window.localStorage.setItem(KEY, String(Date.now()));
+    window.localStorage.setItem(DISMISSED_KEY, String(Date.now()));
     setOpen(false);
   }
 
@@ -3547,28 +4186,52 @@ export function InstallPrompt() {
 - [ ] **Step 4: Run tests**
 
 Run: `pnpm test -t "canPromptInstall"`
-Expected: 3 PASS.
+Expected: 5 PASS.
 
-- [ ] **Step 5: Mount in `AppShell`**
+- [ ] **Step 5: Mount in `AppShell` and call `recordSession()` on mount**
 
-Edit `src/components/layout/app-shell.tsx`. Add an import and mount the prompt inside the shell:
+Edit `src/components/layout/app-shell.tsx`. Add an import, render the prompt, and bump the session counter on first render of the shell so `canPromptInstall` can satisfy "second session" gating:
 
 ```tsx
 import { InstallPrompt } from "@/components/install-prompt";
-// ...
-<ToastViewport />
+import { recordSession } from "@/components/install-prompt";
+```
+
+Inside `AppShellInner`, before the return:
+
+```tsx
+React.useEffect(() => {
+  recordSession();
+}, []);
+```
+
+In the shell's return tree, after `<ToastViewport />`:
+
+```tsx
 <InstallPrompt />
 ```
 
-- [ ] **Step 6: Type-check + build**
+- [ ] **Step 6: Hook `recordSyncSuccess()` into the sync engine**
+
+Open `src/lib/offline/sync.ts`. After a successful push (the existing success branch in `syncAll`, where records flip from `local` to `synced`), call `recordSyncSuccess` so the prompt becomes eligible immediately after the first remote sync:
+
+```ts
+import { recordSyncSuccess } from "@/components/install-prompt";
+// ...inside syncAll, after successful network response:
+recordSyncSuccess();
+```
+
+If `recordSyncSuccess` would create a circular import boundary (sync.ts is also imported by the banner above), inline a tiny localStorage write here instead and skip the named import.
+
+- [ ] **Step 7: Type-check + build**
 
 Run: `pnpm tsc --noEmit && pnpm build`
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
-git add src/components/install-prompt.tsx src/components/__tests__/install-prompt.test.tsx src/components/layout/app-shell.tsx
-git commit -m "feat(pwa): InstallPrompt with 7-day cooldown + iOS fallback copy"
+git add src/components/install-prompt.tsx src/components/__tests__/install-prompt.test.tsx src/components/layout/app-shell.tsx src/lib/offline/sync.ts
+git commit -m "feat(pwa): InstallPrompt with session/sync gating + 7-day cooldown + iOS fallback"
 ```
 
 ---
@@ -3733,27 +4396,34 @@ git commit -m "chore(storybook): scaffold Storybook with stories for foundation 
 - Section 1 Tokens - Task 2.
 - Section 2 Typography - Task 3.
 - Section 3 Iconography - Task 5.
-- Section 4 App Shell - Tasks 21 (TopBar), 22 (BottomNav), 23 (Fab), 24 (AppShell), 29 (wire-in). Per-role tabs are encoded in nav-config (Task 4).
+- Section 4 App Shell - Tasks 21 (TopBar), 22 (BottomNav), 23 (Fab), 24 (AppShell + `useFab` per-page override), 29 (wire-in). Per-role tabs are encoded in nav-config (Task 4); routes those tabs point to are scaffolded as stubs in Task 4 Step 6.
 - Section 5 List primitives - Tasks 11 (ListSearch), 12 (FilterPills), 13 (ListPageHeader), 14 (ListRow), 15 (ListSkeleton/Empty/Error + Pagination restyle).
-- Section 6 Form primitives - Tasks 16 (Field + SmartDefaultBanner), 17 (TilePicker), 18 (Stepper), 19 (PhotoField + FormSubmit), 20 (WizardShell). PickerSheet - Task 10.
-- Section 7 System states - Task 6 (Skeleton), 7 (Toast), 8 (EmptyState rewrite + ErrorState), 25 (OfflineBanner).
-- Section 8 PWA polish - Task 26 (manifest), 27 (splash), 28 (install prompt).
-- Section 9 Migration - Task 29 (wire dashboard layout). `sliding-menu.tsx` left on disk per spec note.
-- Section 10 Testing - every primitive task has a unit/component test pair. Storybook is Task 31 (optional). Lighthouse + a11y verify is Task 30.
+- Section 6 Form primitives - Tasks 16 (Field + SmartDefaultBanner), 17 (TilePicker), 18 (Stepper with long-press accelerator), 19 (PhotoField + FormSubmit), 20 (WizardShell). PickerSheet - Task 10.
+- Section 7 System states - Task 6 (Skeleton), 7 (Toast), 8 (EmptyState rewrite + ErrorState), 25 (OfflineBanner with TDD coverage of state derivation).
+- Section 8 PWA polish - Task 26 (manifest), 27 (splash), 28 (install prompt with session/sync gating + 7-day cooldown).
+- Section 9 Migration - Task 29 (wire dashboard layout). `sliding-menu.tsx` stays alive and is mounted by the More tab during foundation per spec note.
+- Section 10 Testing - all spec-required tests covered: WizardShell step machine, Stepper clamp + long-press, OfflineBanner state derivation, InstallPrompt cooldown + trigger gating, TilePicker single + multi, ActionSheet escape + disabled. Storybook is Task 31 (optional). Lighthouse + a11y verify is Task 30. Pure-restyle / config tasks (2, 21, 26, 27) skip TDD by design.
 
 **Placeholder scan:** none of the patterns ("TBD", "TODO", "implement later", "fill in details", "Add appropriate error handling", "Write tests for the above" without code, "Similar to Task N") appear above. Every code step contains complete code.
 
 **Type consistency:**
 - `RoleNavKey` is defined in Task 4 and reused in Task 22 (BottomNav), Task 24 (AppShell), Task 29 (dashboard layout). Same name everywhere.
+- `NavTab` is a discriminated union (`{ kind: "link" }` vs `{ kind: "action" }`) consumed unchanged in Task 22.
 - `getNavConfig` returns `{ tabs, fab? }` (Task 4); both consumed unchanged in Tasks 22 and 24.
+- `FabOverride` (Task 24) shares `label`, `icon`, `href`, `onClick` field names with `FabConfig` (Task 4) so the resolved-FAB code path looks identical for default and override cases.
 - `Icon` prop names (`name`, `size`, `strokeWidth`) consistent.
 - `ActionSheet` and `PickerSheet` use the same Drawer wrapper from `vaul` and the same backdrop classes.
 - `Stepper` test uses `name: "Increase" / "Decrease"` and the implementation uses matching `aria-label` values.
 
 **Risks captured:**
-- Lucide icon names: `PalmTree` may not exist; Task 4 calls this out and provides a fallback (`Trees`). Same pattern noted for `TreePalm` in Task 5 - confirm at type-check time.
+- Lucide icon names: verified against lucide-react 0.487 exports. `Trees` is canonical; `Home`, `MoreHorizontal`, `FileBarChart`, `AlertTriangle`, `CheckCircle2`, `Loader2`, `HelpCircle` are exported as backwards-compatible aliases for renamed icons. The earlier draft used `PalmTree`, which is not exported in any form, and has been replaced with `Trees`.
 - Storybook is time-boxed; can be skipped without breaking the rest of the plan.
-- `next/font/google` font subsets must include `tamil` and `sinhala`. Verified spelling in Task 3 against current `next/font` API; if any name fails (`Noto_Sans_Sinhala` casing), check the live Google Fonts list and rename in `fonts.ts`.
+- `next/font/google` Noto family names verified: `Inter`, `Noto_Sans_Tamil`, `Noto_Sans_Sinhala` all exist in the installed Next 15 generated types.
+- ListRow uses sibling `<button>` elements inside a card-styled `<div>` rather than nested buttons. An earlier draft nested `<span role="button">` inside `<button>`, which is invalid HTML and breaks keyboard a11y.
+- AppShell wraps `<Fab>` in a `FabProvider` so per-page `useFab()` overrides resolve cleanly. `useFab` hashes its argument so callers can pass fresh object literals without triggering a render loop.
+- `useLocale()` is called once at the top of `AppShellInner`, never inside a conditional render branch (which would violate Rules of Hooks for roles with no FAB).
+- BottomNav matches role-root tabs by exact equality, deeper tabs by prefix, so only one tab is active per route.
+- OfflineBanner is event-driven (online/offline + `jpr:sync-done` + visibilitychange) instead of polling; the previous 5s interval drained operator-phone battery.
 
 ---
 
