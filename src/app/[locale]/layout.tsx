@@ -3,6 +3,7 @@ import { NextIntlClientProvider } from "next-intl";
 import { getMessages } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { locales, type Locale } from "@/i18n/config";
+import { fontForLocale, htmlClassForLocale } from "@/lib/fonts";
 import { NavigationProgress } from "@/components/layout/navigation-progress";
 import "@/app/globals.css";
 
@@ -32,7 +33,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: "#121221",
+  themeColor: "#16a34a",
 };
 
 export default async function LocaleLayout({
@@ -48,10 +49,11 @@ export default async function LocaleLayout({
     notFound();
   }
 
+  const font = fontForLocale(locale as Locale);
   const messages = await getMessages();
 
   return (
-    <html lang={locale}>
+    <html lang={locale} className={`${font.variable} ${htmlClassForLocale(locale as Locale)}`}>
       <body>
         <NavigationProgress />
         <NextIntlClientProvider messages={messages}>
