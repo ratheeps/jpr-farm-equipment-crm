@@ -4,48 +4,78 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 224 71.4% 4.1%;
+    /* Surfaces */
+    --background: 210 20% 98%;          /* slate-50 page bg */
+    --foreground: 222 47% 11%;          /* slate-900 text */
     --card: 0 0% 100%;
-    --card-foreground: 224 71.4% 4.1%;
+    --card-foreground: 222 47% 11%;
     --popover: 0 0% 100%;
-    --popover-foreground: 224 71.4% 4.1%;
-    --primary: 142 76% 36%;
-    --primary-foreground: 355.7 100% 97.3%;
-    --secondary: 220 14.3% 95.9%;
-    --secondary-foreground: 220.9 39.3% 11%;
-    --muted: 220 14.3% 95.9%;
-    --muted-foreground: 220 8.9% 46.1%;
-    --accent: 220 14.3% 95.9%;
-    --accent-foreground: 220.9 39.3% 11%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 20% 98%;
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 142 76% 36%;
-    --radius: 0.75rem;
+    --popover-foreground: 222 47% 11%;
+
+    /* Brand - green primary */
+    --primary: 142 71% 35%;             /* green-600 */
+    --primary-foreground: 0 0% 100%;
+
+    /* Accent - amber/terra warning + offline */
+    --accent: 38 92% 50%;               /* amber-500 */
+    --accent-foreground: 26 83% 14%;    /* amber-950 */
+
+    /* Secondary surface */
+    --secondary: 210 40% 96%;           /* slate-100 */
+    --secondary-foreground: 222 47% 11%;
+
+    /* Muted text + sunken surface */
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;    /* slate-500 */
+
+    /* Status */
+    --success: 142 71% 35%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 26 83% 14%;
+    --destructive: 0 72% 51%;           /* red-600 */
+    --destructive-foreground: 0 0% 100%;
+    --info: 217 91% 60%;                /* blue-500 */
+    --info-foreground: 0 0% 100%;
+
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 142 71% 35%;
+
+    --radius: 0.875rem;                 /* 14px = lg */
+
+    /* Shadows - referenced via Tailwind utilities below */
+    --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.08);
+    --shadow-sheet: 0 -4px 12px rgba(0, 0, 0, 0.10);
+    --shadow-fab: 0 6px 16px rgba(22, 163, 74, 0.40);
   }
 
   .dark {
-    --background: 224 71.4% 4.1%;
-    --foreground: 210 20% 98%;
-    --card: 224 71.4% 4.1%;
-    --card-foreground: 210 20% 98%;
-    --popover: 224 71.4% 4.1%;
-    --popover-foreground: 210 20% 98%;
-    --primary: 142 76% 36%;
-    --primary-foreground: 355.7 100% 97.3%;
-    --secondary: 215 27.9% 16.9%;
-    --secondary-foreground: 210 20% 98%;
-    --muted: 215 27.9% 16.9%;
-    --muted-foreground: 217.9 10.6% 64.9%;
-    --accent: 215 27.9% 16.9%;
-    --accent-foreground: 210 20% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 20% 98%;
-    --border: 215 27.9% 16.9%;
-    --input: 215 27.9% 16.9%;
-    --ring: 142 76% 36%;
+    --background: 222 47% 11%;
+    --foreground: 210 40% 98%;
+    --card: 222 47% 13%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222 47% 13%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 142 71% 45%;
+    --primary-foreground: 0 0% 100%;
+    --accent: 38 92% 55%;
+    --accent-foreground: 26 83% 14%;
+    --secondary: 217 19% 27%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217 19% 27%;
+    --muted-foreground: 215 20% 65%;
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 55%;
+    --warning-foreground: 26 83% 14%;
+    --destructive: 0 72% 56%;
+    --destructive-foreground: 0 0% 100%;
+    --info: 217 91% 60%;
+    --info-foreground: 0 0% 100%;
+    --border: 217 19% 27%;
+    --input: 217 19% 27%;
+    --ring: 142 71% 45%;
   }
 }
 
@@ -55,18 +85,48 @@
   }
   body {
     @apply bg-background text-foreground;
-    /* Prevent text size adjustment on mobile orientation change */
     -webkit-text-size-adjust: 100%;
+    font-feature-settings: "cv11", "ss01";
+  }
+
+  /* Locale-specific line-height bumps for Tamil + Sinhala scripts */
+  html.locale-ta body,
+  html.locale-si body {
+    line-height: 1.7;
+  }
+
+  /* Tabular numerals utility for currency/metric components */
+  .tnum {
+    font-variant-numeric: tabular-nums;
   }
 }
 
-/* Mobile safe area padding for bottom nav */
+/* Mobile safe-area utilities */
 .pb-safe {
   padding-bottom: env(safe-area-inset-bottom);
 }
+.pt-safe {
+  padding-top: env(safe-area-inset-top);
+}
 
-/* Touch target minimum size */
+/* Touch target minimum (44px iOS guideline) */
 .touch-target {
-  min-height: 48px;
-  min-width: 48px;
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Skeleton shimmer */
+@keyframes skeleton-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    hsl(var(--muted)) 0%,
+    hsl(var(--secondary)) 50%,
+    hsl(var(--muted)) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
 }
