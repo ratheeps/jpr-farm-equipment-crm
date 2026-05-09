@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface Props {
   page: number;
@@ -19,37 +20,35 @@ export function Pagination({ page, totalPages, basePath, query }: Props) {
     return qs ? `${basePath}?${qs}` : basePath;
   }
 
+  const baseBtn =
+    "h-9 w-9 min-w-9 flex items-center justify-center rounded-md bg-secondary text-foreground transition";
+  const disabled = "opacity-50 pointer-events-none";
+
   return (
-    <div className="flex items-center justify-between mt-4 px-1">
-      <span className="text-xs text-muted-foreground">
+    <nav className="mt-4 flex items-center justify-between gap-2 px-1" aria-label="Pagination">
+      <span className="text-xs text-muted-foreground tnum">
         Page {page + 1} of {totalPages}
       </span>
       <div className="flex gap-2">
         {page > 0 ? (
-          <Link
-            href={href(page - 1)}
-            className="h-8 w-8 flex items-center justify-center rounded-lg border border-border bg-card text-muted-foreground active:scale-95 transition-transform"
-          >
+          <Link href={href(page - 1)} className={cn(baseBtn, "active:bg-secondary/80")} aria-label="Previous page">
             <ChevronLeft className="h-4 w-4" />
           </Link>
         ) : (
-          <span className="h-8 w-8 flex items-center justify-center rounded-lg border border-border bg-secondary text-muted-foreground/40">
+          <span className={cn(baseBtn, disabled)} aria-hidden>
             <ChevronLeft className="h-4 w-4" />
           </span>
         )}
         {page < totalPages - 1 ? (
-          <Link
-            href={href(page + 1)}
-            className="h-8 w-8 flex items-center justify-center rounded-lg border border-border bg-card text-muted-foreground active:scale-95 transition-transform"
-          >
+          <Link href={href(page + 1)} className={cn(baseBtn, "active:bg-secondary/80")} aria-label="Next page">
             <ChevronRight className="h-4 w-4" />
           </Link>
         ) : (
-          <span className="h-8 w-8 flex items-center justify-center rounded-lg border border-border bg-secondary text-muted-foreground/40">
+          <span className={cn(baseBtn, disabled)} aria-hidden>
             <ChevronRight className="h-4 w-4" />
           </span>
         )}
       </div>
-    </div>
+    </nav>
   );
 }
