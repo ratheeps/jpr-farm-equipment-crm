@@ -1,5 +1,6 @@
 import { type LucideIcon } from "lucide-react";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 
 interface EmptyStateProps {
   icon: LucideIcon;
@@ -7,6 +8,7 @@ interface EmptyStateProps {
   description?: string;
   actionLabel?: string;
   actionHref?: string;
+  className?: string;
 }
 
 export function EmptyState({
@@ -15,20 +17,24 @@ export function EmptyState({
   description,
   actionLabel,
   actionHref,
+  className,
 }: EmptyStateProps) {
   return (
-    <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
-      <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mb-4">
-        <Icon className="h-8 w-8 text-muted-foreground" />
-      </div>
-      <p className="font-semibold text-foreground text-base">{title}</p>
+    <div
+      className={cn(
+        "flex flex-col items-center justify-center py-16 px-6 text-center",
+        className
+      )}
+    >
+      <Icon className="h-12 w-12 text-muted-foreground/60" strokeWidth={1.5} />
+      <p className="mt-4 text-base font-semibold text-foreground">{title}</p>
       {description && (
-        <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+        <p className="mt-1 text-sm text-muted-foreground max-w-xs">{description}</p>
       )}
       {actionLabel && actionHref && (
         <Link
           href={actionHref}
-          className="mt-5 inline-flex items-center justify-center h-11 px-6 rounded-xl bg-primary text-primary-foreground text-sm font-semibold"
+          className="mt-5 inline-flex items-center justify-center h-11 px-6 rounded-lg bg-primary text-primary-foreground text-sm font-semibold shadow-card"
         >
           {actionLabel}
         </Link>
