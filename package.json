@@ -14,7 +14,8 @@
     "db:seed": "tsx src/db/seed.ts",
     "test": "vitest run --project unit",
     "test:watch": "vitest --project unit",
-    "test:rls": "vitest run --project rls"
+    "test:rls": "vitest run --project rls",
+    "gen:splash": "node scripts/generate-splash.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.777.0",
@@ -71,6 +72,7 @@
     "eslint-config-next": "15.3.1",
     "jsdom": "^29.0.1",
     "postcss": "^8",
+    "sharp": "^0.34.5",
     "tailwindcss": "^3.4.17",
     "tsx": "^4.21.0",
     "typescript": "^5",
