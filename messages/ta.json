@@ -79,7 +79,11 @@
     "loans": "Loans",
     "receivables": "Receivables",
     "notifications": "Notifications",
-    "cashTransactions": "Cash Transactions"
+    "cashTransactions": "Cash Transactions",
+    "home": "Home",
+    "cash": "Cash",
+    "newJob": "New job",
+    "newReceipt": "New receipt"
   },
   "vehicles": {
     "title": "வாகனங்கள்",

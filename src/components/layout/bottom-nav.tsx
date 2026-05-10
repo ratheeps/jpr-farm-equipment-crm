@@ -4,151 +4,94 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
-import {
-  LayoutDashboard,
-  Wallet,
-  FolderKanban,
-  MoreHorizontal,
-  ClipboardList,
-  Receipt,
-  Clock,
-  FileBarChart,
-  ArrowLeftRight,
-} from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getNavConfig, type NavTab, type RoleNavKey } from "@/lib/nav-config";
 import { SlidingMenu } from "@/components/layout/sliding-menu";
 
-type NavItem = {
-  href: string;
-  labelKey: string;
-  icon: React.ElementType;
-};
-
-// Owner: Dashboard, Projects, Invoices, Finance, More (Farms moved to sliding menu)
-const ownerNavItems: NavItem[] = [
-  { href: "/owner", labelKey: "dashboard", icon: LayoutDashboard },
-  { href: "/admin/projects", labelKey: "projects", icon: FolderKanban },
-  { href: "/admin/invoices", labelKey: "invoices", icon: Receipt },
-  { href: "/owner/finance", labelKey: "finance", icon: Wallet },
-];
-
-const adminNavItems: NavItem[] = [
-  { href: "/admin", labelKey: "dashboard", icon: LayoutDashboard },
-  { href: "/admin/projects", labelKey: "projects", icon: FolderKanban },
-  { href: "/admin/invoices", labelKey: "invoices", icon: Receipt },
-  { href: "/admin/staff", labelKey: "staff", icon: ClipboardList },
-];
-
-const operatorNavItems: NavItem[] = [
-  { href: "/operator", labelKey: "dashboard", icon: LayoutDashboard },
-  { href: "/operator/log", labelKey: "logWork", icon: Clock },
-  { href: "/operator/expenses", labelKey: "expenses", icon: Receipt },
-  { href: "/operator/history", labelKey: "history", icon: ClipboardList },
-];
-
-const auditorNavItems: NavItem[] = [
-  { href: "/auditor", labelKey: "dashboard", icon: LayoutDashboard },
-  { href: "/auditor/reports", labelKey: "reports", icon: FileBarChart },
-  { href: "/auditor/transactions", labelKey: "transactions", icon: ArrowLeftRight },
-  { href: "/auditor/export", labelKey: "export", icon: Receipt },
-];
-
-const financeNavItems: NavItem[] = [
-  { href: "/finance", labelKey: "dashboard", icon: LayoutDashboard },
-  { href: "/finance/invoices", labelKey: "invoices", icon: Receipt },
-  { href: "/finance/loans", labelKey: "loans", icon: Wallet },
-  { href: "/finance/receivables", labelKey: "receivables", icon: ArrowLeftRight },
-];
-
-const roleNavMap: Record<string, NavItem[]> = {
-  owner: ownerNavItems,
-  admin: adminNavItems,
-  operator: operatorNavItems,
-  auditor: auditorNavItems,
-  finance: financeNavItems,
-};
-
 interface BottomNavProps {
-  role: string;
+  role: RoleNavKey;
+}
+
+function isTabActive(tab: NavTab, locale: string, pathname: string): boolean {
+  if (tab.kind !== "link") return false;
+  const fullHref = `/${locale}${tab.href}`;
+  const isRoleRoot = tab.href.split("/").filter(Boolean).length === 1;
+  if (isRoleRoot) return pathname === fullHref;
+  return pathname === fullHref || pathname.startsWith(`${fullHref}/`);
 }
 
 export function BottomNav({ role }: BottomNavProps) {
   const t = useTranslations("nav");
   const locale = useLocale();
   const pathname = usePathname();
-  const navItems = roleNavMap[role] ?? operatorNavItems;
+  const { tabs } = getNavConfig(role);
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
     <>
       <SlidingMenu open={menuOpen} onClose={() => setMenuOpen(false)} role={role} />
+      <nav
+        aria-label="Primary"
+        className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-card/95 pb-safe backdrop-blur"
+      >
+        <ul
+          className="grid h-16"
+          style={{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }}
+        >
+          {tabs.map((tab, i) => {
+            const Icon = tab.icon;
+            const label = t(tab.labelKey as Parameters<typeof t>[0]);
+            const className = cn(
+              "flex flex-col items-center justify-center gap-1 text-[10px] font-semibold",
+              menuOpen && tab.kind === "action"
+                ? "text-primary"
+                : tab.kind === "link" && isTabActive(tab, locale, pathname)
+                ? "text-primary"
+                : "text-muted-foreground"
+            );
 
-      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-md border-t border-border/60 shadow-[0_-1px_12px_rgba(0,0,0,0.06)]">
-        <div className="flex items-stretch h-16 pb-safe">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const href = `/${locale}${item.href}`;
-            const isActive =
-              pathname === href ||
-              (item.href !== `/${role}` && pathname.startsWith(href));
+            if (tab.kind === "action") {
+              const active = menuOpen;
+              return (
+                <li key={`action-${i}`} className="contents">
+                  <button
+                    type="button"
+                    onClick={() => setMenuOpen(true)}
+                    aria-label={label}
+                    aria-expanded={menuOpen}
+                    className={className}
+                  >
+                    <Icon
+                      className="h-5 w-5"
+                      strokeWidth={active ? 2.5 : 2}
+                      aria-hidden
+                    />
+                    <span>{label}</span>
+                  </button>
+                </li>
+              );
+            }
 
+            const href = `/${locale}${tab.href}`;
+            const active = isTabActive(tab, locale, pathname);
             return (
-              <Link
-                key={item.href}
-                href={href}
-                className="flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors"
-              >
-                <div
-                  className={cn(
-                    "flex items-center justify-center w-10 h-7 rounded-2xl transition-all",
-                    isActive
-                      ? "bg-primary/12 text-primary"
-                      : "text-muted-foreground"
-                  )}
+              <li key={tab.href} className="contents">
+                <Link
+                  href={href}
+                  aria-current={active ? "page" : undefined}
+                  className={className}
                 >
                   <Icon
                     className="h-5 w-5"
-                    strokeWidth={isActive ? 2.5 : 1.8}
+                    strokeWidth={active ? 2.5 : 2}
+                    aria-hidden
                   />
-                </div>
-                <span
-                  className={cn(
-                    "text-[10px] leading-none",
-                    isActive
-                      ? "font-semibold text-primary"
-                      : "text-muted-foreground"
-                  )}
-                >
-                  {t(item.labelKey as Parameters<typeof t>[0])}
-                </span>
-              </Link>
+                  <span>{label}</span>
+                </Link>
+              </li>
             );
           })}
-
-          {/* More tab — opens sliding menu */}
-          <button
-            onClick={() => setMenuOpen(true)}
-            className="flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors"
-            aria-label={t("more")}
-          >
-            <div
-              className={cn(
-                "flex items-center justify-center w-10 h-7 rounded-2xl transition-all",
-                menuOpen ? "bg-primary/12 text-primary" : "text-muted-foreground"
-              )}
-            >
-              <MoreHorizontal className="h-5 w-5" strokeWidth={menuOpen ? 2.5 : 1.8} />
-            </div>
-            <span
-              className={cn(
-                "text-[10px] leading-none",
-                menuOpen ? "font-semibold text-primary" : "text-muted-foreground"
-              )}
-            >
-              {t("more")}
-            </span>
-          </button>
-        </div>
+        </ul>
       </nav>
     </>
   );

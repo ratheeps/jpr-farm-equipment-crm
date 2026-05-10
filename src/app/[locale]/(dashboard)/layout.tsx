@@ -1,9 +1,10 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
 import { BottomNav } from "@/components/layout/bottom-nav";
+import type { RoleNavKey } from "@/lib/nav-config";
 
 // Map role to nav section key
-function getRoleNavKey(role: string): string {
+function getRoleNavKey(role: string): RoleNavKey {
   switch (role) {
     case "super_admin":
       return "owner";
