@@ -65,7 +65,13 @@ async function syncExpenses(): Promise<void> {
 }
 
 export async function syncAll(): Promise<void> {
-  await Promise.all([syncLogs(), syncExpenses()]);
+  try {
+    await Promise.all([syncLogs(), syncExpenses()]);
+  } finally {
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("jpr:sync-done"));
+    }
+  }
 }
 
 /**
