@@ -42,12 +42,13 @@ export function useFab(next: FabOverride | null): void {
   const key = stableKey(next);
   const latest = React.useRef(next);
   latest.current = next;
+  const ctxRef = React.useRef(ctx);
+  ctxRef.current = ctx;
   React.useEffect(() => {
-    if (!ctx) return;
-    ctx.set(latest.current);
-    return () => ctx.set(null);
+    ctxRef.current?.set(latest.current);
+    return () => ctxRef.current?.set(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ctx, key]);
+  }, [key]);
 }
 
 function stableKey(o: FabOverride | null): string {
