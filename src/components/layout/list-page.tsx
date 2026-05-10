@@ -19,7 +19,7 @@ export function ListPageHeader({
   return (
     <div
       className={cn(
-        "sticky top-0 z-30 -mx-4 mb-4 flex flex-col gap-3 bg-background/95 px-4 pb-3 pt-4 backdrop-blur",
+        "sticky top-14 z-20 -mx-4 mb-4 flex flex-col gap-3 bg-background/95 px-4 pb-3 pt-4 backdrop-blur",
         className
       )}
     >
