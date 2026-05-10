@@ -5,6 +5,7 @@ import { useLocale } from "next-intl";
 import { BottomNav } from "@/components/layout/bottom-nav";
 import { Fab } from "@/components/layout/fab";
 import { OfflineBanner } from "@/components/offline-banner";
+import { InstallPrompt, recordSession } from "@/components/install-prompt";
 import { ToastProvider, ToastViewport } from "@/components/ui/toast";
 import {
   FabProvider,
@@ -40,6 +41,10 @@ function AppShellInner({
   const locale = useLocale();
   const config = getNavConfig(role);
   const override = useFabOverride();
+
+  React.useEffect(() => {
+    recordSession();
+  }, []);
 
   // Resolution: page override (if any) wins. If the override is `{ hidden: true }`
   // or any truthy override that produced no renderable target, hide.
@@ -77,6 +82,7 @@ function AppShellInner({
         {fabNode}
         <BottomNav role={role} />
         <ToastViewport />
+        <InstallPrompt />
       </div>
     </ToastProvider>
   );

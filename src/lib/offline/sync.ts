@@ -67,6 +67,11 @@ async function syncExpenses(): Promise<void> {
 export async function syncAll(): Promise<void> {
   try {
     await Promise.all([syncLogs(), syncExpenses()]);
+    // Mirror SYNC_SUCCESS_KEY from install-prompt.tsx without importing
+    // (sync.ts is imported by offline-banner; back-import would cycle).
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("install-prompt:syncSucceeded", "1");
+    }
   } finally {
     if (typeof window !== "undefined") {
       window.dispatchEvent(new CustomEvent("jpr:sync-done"));
