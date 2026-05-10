@@ -77,13 +77,13 @@
     "leave": "නිවාඩු ඉල්ලීම",
     "auditorFinance": "මූල්‍ය",
     "loans": "Loans",
-    "receivables": "Receivables",
+    "receivables": "ලැබිය යුතු",
     "notifications": "Notifications",
     "cashTransactions": "Cash Transactions",
-    "home": "Home",
-    "cash": "Cash",
-    "newJob": "New job",
-    "newReceipt": "New receipt"
+    "home": "මුල් පිටුව",
+    "cash": "මුදල්",
+    "newJob": "නව රැකියාව",
+    "newReceipt": "නව රිසිට්පත"
   },
   "vehicles": {
     "title": "යාත්‍රා",

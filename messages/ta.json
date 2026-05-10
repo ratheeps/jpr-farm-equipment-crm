@@ -77,13 +77,13 @@
     "leave": "விடுப்பு கோரிக்கை",
     "auditorFinance": "நிதி",
     "loans": "Loans",
-    "receivables": "Receivables",
+    "receivables": "பெறத்தக்கவை",
     "notifications": "Notifications",
     "cashTransactions": "Cash Transactions",
-    "home": "Home",
-    "cash": "Cash",
-    "newJob": "New job",
-    "newReceipt": "New receipt"
+    "home": "முகப்பு",
+    "cash": "பணம்",
+    "newJob": "புதிய வேலை",
+    "newReceipt": "புதிய ரசீது"
   },
   "vehicles": {
     "title": "வாகனங்கள்",
