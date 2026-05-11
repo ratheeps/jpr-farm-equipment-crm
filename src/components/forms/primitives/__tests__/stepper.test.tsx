@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, screen, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import * as React from "react";
 import { Stepper } from "../stepper";
 
 describe("<Stepper>", () => {
@@ -53,5 +54,33 @@ describe("<Stepper>", () => {
     });
 
     expect(onChange.mock.calls.length).toBeGreaterThanOrEqual(4);
+  });
+
+  it("walks value forward on press-and-hold when used controlled", () => {
+    vi.useFakeTimers();
+    function Wrapped() {
+      const [v, setV] = React.useState(0);
+      return <Stepper value={v} onChange={setV} step={1} min={0} max={100} />;
+    }
+    render(<Wrapped />);
+    const inc = screen.getByRole("button", { name: "Increase" });
+
+    act(() => {
+      inc.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+    });
+    act(() => {
+      vi.advanceTimersByTime(400);
+      vi.advanceTimersByTime(80 * 3);
+    });
+    act(() => {
+      inc.dispatchEvent(new PointerEvent("pointerup", { bubbles: true }));
+    });
+
+    // The readout div renders the current numeric value. After hold +
+    // 3 repeats the value should have walked past 1; a real walk hits at
+    // least 2 even if the very last tick races the pointerup.
+    const readout = inc.parentElement?.querySelector(".tabular-nums");
+    const final = Number(readout?.textContent ?? "0");
+    expect(final).toBeGreaterThanOrEqual(2);
   });
 });
