@@ -523,6 +523,8 @@
     "rate": "Rate",
     "lineAmount": "Amount",
     "noItems": "Add at least one line item",
+    "fromLog": "From log",
+    "noUninvoicedLogs": "No uninvoiced logs for this project",
     "noInvoices": "No invoices yet",
     "noInvoicesDesc": "Create your first invoice to start billing clients",
     "payments": "Payments",
@@ -542,7 +544,8 @@
       "hours": "Hours",
       "acres": "Acres",
       "km": "KM",
-      "tasks": "Tasks"
+      "tasks": "Tasks",
+      "mobilization": "Mobilization"
     },
     "statuses": {
       "draft": "Draft",
