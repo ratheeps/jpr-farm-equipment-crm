@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server";
-import { Topbar } from "@/components/layout/topbar";
+import { PageHeader } from "@/components/layout/page-header";
 import { OfflineBanner } from "@/components/offline-banner";
 import { LogWorkCard } from "@/components/operator/log-work-card";
 import {
@@ -25,7 +25,7 @@ export default async function OperatorLogPage() {
 
   return (
     <div>
-      <Topbar title={t("todayLog")} showBack />
+      <PageHeader title={t("todayLog")} back />
       <OfflineBanner />
       <div className="px-4 py-6">
         <LogWorkCard

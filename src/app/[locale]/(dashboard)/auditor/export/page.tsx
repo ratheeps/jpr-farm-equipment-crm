@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Topbar } from "@/components/layout/topbar";
+import { PageHeader } from "@/components/layout/page-header";
 import { Download, FileText } from "lucide-react";
 import { useState } from "react";
 import {
@@ -104,7 +104,7 @@ export default function AuditorExportPage() {
 
   return (
     <div>
-      <Topbar title={t("export")} showBack />
+      <PageHeader title={t("export")} back />
       <div className="px-4 py-4 space-y-3">
         {exports.map((item) => (
           <div

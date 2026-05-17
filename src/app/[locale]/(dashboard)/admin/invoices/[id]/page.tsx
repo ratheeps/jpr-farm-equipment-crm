@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server";
-import { Topbar } from "@/components/layout/topbar";
+import { PageHeader } from "@/components/layout/page-header";
 import { InvoiceForm } from "@/components/forms/invoice-form";
 import { InvoiceActions } from "@/components/invoices/invoice-actions";
 import { InvoicePayments } from "@/components/invoices/invoice-payments";
@@ -37,7 +37,7 @@ export default async function EditInvoicePage({
 
   return (
     <div>
-      <Topbar title={t("edit")} showBack />
+      <PageHeader title={t("edit")} back />
 
       {/* PDF + WhatsApp action buttons */}
       <InvoiceActions

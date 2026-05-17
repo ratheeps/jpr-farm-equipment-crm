@@ -1,4 +1,4 @@
-import { Topbar } from "@/components/layout/topbar";
+import { PageHeader } from "@/components/layout/page-header";
 import { getSession } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
 import { getStaffPerformance } from "@/lib/actions/reports";
@@ -35,7 +35,7 @@ export default async function StaffPerformancePage({
 
   return (
     <div>
-      <Topbar title="Staff Performance" showBack />
+      <PageHeader title="Staff Performance" back />
       <div className="px-4 py-4 space-y-4">
         {/* Date filter hint */}
         <p className="text-xs text-muted-foreground">

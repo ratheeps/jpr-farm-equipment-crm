@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server";
-import { Topbar } from "@/components/layout/topbar";
+import { PageHeader } from "@/components/layout/page-header";
 import Link from "next/link";
 import { Clock, Receipt, History, MapPin, Briefcase, Square } from "lucide-react";
 import {
@@ -28,7 +28,7 @@ export default async function OperatorDashboard({
 
   return (
     <div>
-      <Topbar title="JPR" />
+      <PageHeader title="JPR" />
       <div className="px-4 py-6 space-y-4">
         {activeLog ? (
           <Link

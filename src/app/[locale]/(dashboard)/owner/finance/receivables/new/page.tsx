@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server";
-import { Topbar } from "@/components/layout/topbar";
+import { PageHeader } from "@/components/layout/page-header";
 import { ReceivableForm } from "@/components/forms/receivable-form";
 import { db } from "@/db";
 import { projects } from "@/db/schema";
@@ -19,7 +19,7 @@ export default async function NewReceivablePage({
 
   return (
     <div>
-      <Topbar title={t("addLending")} showBack />
+      <PageHeader title={t("addLending")} back />
       <div className="px-4 py-4">
         <ReceivableForm locale={locale} availableProjects={allProjects} />
       </div>

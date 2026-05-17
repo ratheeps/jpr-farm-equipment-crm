@@ -1,4 +1,4 @@
-import { Topbar } from "@/components/layout/topbar";
+import { PageHeader } from "@/components/layout/page-header";
 import { getSession } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
 import { getSchedule, getScheduleFormData } from "@/lib/actions/schedules";
@@ -45,7 +45,7 @@ export default async function StaffSchedulePage({
 
   return (
     <div>
-      <Topbar title="Operator Schedule" showBack />
+      <PageHeader title="Operator Schedule" back />
       <div className="px-4 py-4">
         <ScheduleManager
           initialSchedule={schedule}

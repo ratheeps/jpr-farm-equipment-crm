@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server";
-import { Topbar } from "@/components/layout/topbar";
+import { PageHeader } from "@/components/layout/page-header";
 import { getCashTransactions } from "@/lib/actions/finance";
 import { getSession } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
@@ -44,7 +44,7 @@ export default async function AuditorTransactionsPage({
 
   return (
     <div>
-      <Topbar title={t("transactions")} showBack />
+      <PageHeader title={t("transactions")} back />
       <div className="px-4 py-4">
         {transactions.length === 0 ? (
           <p className="text-center text-muted-foreground py-12">

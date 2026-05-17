@@ -1,9 +1,12 @@
 "use client";
 
 import * as React from "react";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
+import { Moon, Sun } from "lucide-react";
 import { BottomNav } from "@/components/layout/bottom-nav";
 import { Fab } from "@/components/layout/fab";
+import { TopBar } from "@/components/layout/topbar";
+import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import { OfflineBanner } from "@/components/offline-banner";
 import { InstallPrompt, recordSession } from "@/components/install-prompt";
 import { ToastProvider, ToastViewport } from "@/components/ui/toast";
@@ -11,70 +14,93 @@ import {
   FabProvider,
   useFabOverride,
 } from "@/components/layout/fab-context";
+import {
+  TopBarProvider,
+  useTopBarOverride,
+} from "@/components/layout/topbar-context";
 import { getNavConfig, type RoleNavKey } from "@/lib/nav-config";
 
 interface AppShellProps {
   role: RoleNavKey;
-  topBar?: React.ReactNode;
   children: React.ReactNode;
 }
 
-export function AppShell({ role, topBar, children }: AppShellProps) {
+export function AppShell({ role, children }: AppShellProps) {
   return (
     <FabProvider>
-      <AppShellInner role={role} topBar={topBar}>
-        {children}
-      </AppShellInner>
+      <TopBarProvider>
+        <AppShellInner role={role}>{children}</AppShellInner>
+      </TopBarProvider>
     </FabProvider>
   );
 }
 
 function AppShellInner({
   role,
-  topBar,
   children,
 }: {
   role: RoleNavKey;
-  topBar?: React.ReactNode;
   children: React.ReactNode;
 }) {
   const locale = useLocale();
+  const t = useTranslations("nav");
   const config = getNavConfig(role);
-  const override = useFabOverride();
+  const fabOverride = useFabOverride();
+  const topBarOverride = useTopBarOverride();
 
   React.useEffect(() => {
     recordSession();
   }, []);
 
-  // Resolution: page override (if any) wins. If the override is `{ hidden: true }`
-  // or any truthy override that produced no renderable target, hide.
-  // Otherwise fall back to the role's default FAB from nav-config.
   let fabNode: React.ReactNode = null;
-  if (override) {
-    if (!override.hidden) {
+  if (fabOverride) {
+    if (!fabOverride.hidden) {
       fabNode = (
         <Fab
-          label={override.label}
-          icon={override.icon}
-          href={override.href}
-          onClick={override.onClick}
+          label={fabOverride.label}
+          icon={fabOverride.icon}
+          href={fabOverride.href}
+          onClick={fabOverride.onClick}
         />
       );
     }
   } else if (config.fab) {
     fabNode = (
       <Fab
-        label={config.fab.labelKey}
+        label={t(config.fab.labelKey as Parameters<typeof t>[0])}
         icon={config.fab.icon}
         href={`/${locale}${config.fab.href}`}
       />
     );
   }
 
+  const globalControls = (
+    <>
+      <LanguageSwitcher />
+      <DarkModeToggle />
+    </>
+  );
+  const rightSlot = topBarOverride?.right ? (
+    <>
+      {topBarOverride.right}
+      {globalControls}
+    </>
+  ) : (
+    globalControls
+  );
+
   return (
     <ToastProvider swipeDirection="down">
       <div className="mx-auto flex min-h-dvh max-w-3xl flex-col bg-background">
-        {topBar}
+        {topBarOverride ? (
+          <TopBar
+            title={topBarOverride.title}
+            back={topBarOverride.back}
+            right={rightSlot}
+          />
+        ) : (
+          <TopBar brand right={rightSlot} />
+        )}
         <OfflineBanner />
         <main className="flex-1 px-4 pb-[calc(env(safe-area-inset-bottom,0px)+5rem)] pt-2">
           {children}
@@ -85,5 +111,36 @@ function AppShellInner({
         <InstallPrompt />
       </div>
     </ToastProvider>
+  );
+}
+
+function DarkModeToggle() {
+  const [dark, setDark] = React.useState(false);
+
+  React.useEffect(() => {
+    const stored = localStorage.getItem("theme");
+    const isDark =
+      stored === "dark" ||
+      (!stored && window.matchMedia("(prefers-color-scheme: dark)").matches);
+    setDark(isDark);
+    document.documentElement.classList.toggle("dark", isDark);
+  }, []);
+
+  function toggle() {
+    const next = !dark;
+    setDark(next);
+    document.documentElement.classList.toggle("dark", next);
+    localStorage.setItem("theme", next ? "dark" : "light");
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={toggle}
+      className="flex h-11 w-11 items-center justify-center rounded-md bg-secondary text-muted-foreground"
+      aria-label={dark ? "Light mode" : "Dark mode"}
+    >
+      {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+    </button>
   );
 }

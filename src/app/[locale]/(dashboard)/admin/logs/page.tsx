@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { vehicles, staffProfiles } from "@/db/schema";
-import { Topbar } from "@/components/layout/topbar";
+import { PageHeader } from "@/components/layout/page-header";
 import { getSession } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
 import { Pagination } from "@/components/layout/pagination";
@@ -46,7 +46,7 @@ export default async function AdminLogsPage({
 
   return (
     <div>
-      <Topbar title="Daily Logs" />
+      <PageHeader title="Daily Logs" />
       <div className="flex items-center justify-between px-4 pt-4">
         <p className="text-lg font-semibold">Daily Logs</p>
         <ExportCsvButton filters={filters} />

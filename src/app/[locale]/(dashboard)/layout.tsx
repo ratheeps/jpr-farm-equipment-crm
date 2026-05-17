@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
 import { AppShell } from "@/components/layout/app-shell";
-import { TopBar } from "@/components/layout/topbar";
 import type { RoleNavKey } from "@/lib/nav-config";
 
 function getRoleNavKey(role: string): RoleNavKey {
@@ -35,9 +34,5 @@ export default async function DashboardLayout({
   }
 
   const navKey = getRoleNavKey(session.role);
-  return (
-    <AppShell role={navKey} topBar={<TopBar brand />}>
-      {children}
-    </AppShell>
-  );
+  return <AppShell role={navKey}>{children}</AppShell>;
 }

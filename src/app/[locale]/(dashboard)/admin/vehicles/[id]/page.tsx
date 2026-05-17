@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server";
-import { Topbar } from "@/components/layout/topbar";
+import { PageHeader } from "@/components/layout/page-header";
 import { VehicleForm } from "@/components/forms/vehicle-form";
 import { MaintenanceSchedules } from "@/components/vehicles/maintenance-schedules";
 import { MaintenanceHistory } from "@/components/vehicles/maintenance-history";
@@ -45,7 +45,7 @@ export default async function VehicleDetailPage({
 
   return (
     <div>
-      <Topbar title={vehicle.name} showBack />
+      <PageHeader title={vehicle.name} back />
       <div className="px-4 py-4">
         <VehicleForm
           locale={locale}

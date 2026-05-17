@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server";
-import { Topbar } from "@/components/layout/topbar";
+import { PageHeader } from "@/components/layout/page-header";
 import { StaffForm } from "@/components/forms/staff-form";
 import { StaffProfile } from "@/components/staff/staff-profile";
 import { StaffWorkHistory } from "@/components/staff/staff-work-history";
@@ -38,7 +38,7 @@ export default async function StaffDetailPage({
 
   return (
     <div>
-      <Topbar title={staffData.fullName ?? staffData.phone} showBack />
+      <PageHeader title={staffData.fullName ?? staffData.phone} back />
       <div className="px-4 py-4 space-y-6">
         {/* Profile summary */}
         <StaffProfile

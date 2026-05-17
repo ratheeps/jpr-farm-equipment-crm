@@ -10,6 +10,23 @@ if (typeof Element !== "undefined") {
   Element.prototype.hasPointerCapture ??= () => false;
 }
 
+// jsdom does not implement matchMedia; components that gate on prefers-color-scheme
+// rely on it. Provide a stub that always reports "no match" so theme code falls
+// back to its localStorage path.
+if (typeof window !== "undefined" && !window.matchMedia) {
+  window.matchMedia = (query: string) =>
+    ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: () => {},
+      removeListener: () => {},
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      dispatchEvent: () => false,
+    } as MediaQueryList);
+}
+
 // jsdom returns "" for `transform` and leaves `mozTransform` undefined; vaul
 // reads `style.transform || style.webkitTransform || style.mozTransform` and
 // then calls `.match()` on it. Force `transform` to "none" so vaul's regex
