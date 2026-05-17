@@ -176,6 +176,8 @@
     "kmTraveled": "ගිය කි.මී.",
     "acresWorked": "වැඩ කළ අක්කර",
     "todayLog": "අද ලොගය",
+    "ongoingWorks": "ක්‍රියාත්මක කාර්යයන්",
+    "noOngoingWorks": "ඔබට පවරා ඇති ක්‍රියාත්මක කාර්යයන් නැත",
     "noAssignment": "අද පැවරීමක් නැත",
     "gpsCapturing": "ස්ථානය වාර්තා කරමින්...",
     "offlineSaved": "නොබැඳි ලෙස සුරකිනු ලැබේ",

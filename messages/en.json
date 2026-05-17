@@ -176,6 +176,8 @@
     "kmTraveled": "KM Traveled",
     "acresWorked": "Acres Worked",
     "todayLog": "Today's Log",
+    "ongoingWorks": "Ongoing Works",
+    "noOngoingWorks": "No ongoing works assigned to you",
     "noAssignment": "No assignment today",
     "gpsCapturing": "Capturing location...",
     "offlineSaved": "Saved offline",
