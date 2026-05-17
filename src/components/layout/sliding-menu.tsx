@@ -22,6 +22,8 @@ import {
   LogOut,
   Bell,
   Coins,
+  FolderKanban,
+  Receipt,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Sheet } from "@/components/ui/sheet";
@@ -39,6 +41,13 @@ interface MenuSection {
 }
 
 const ownerMenu: MenuSection[] = [
+  {
+    heading: "Projects",
+    items: [
+      { href: "/admin/projects", labelKey: "projects", icon: FolderKanban },
+      { href: "/admin/invoices", labelKey: "invoices", icon: Receipt },
+    ],
+  },
   {
     heading: "Vehicle",
     items: [
