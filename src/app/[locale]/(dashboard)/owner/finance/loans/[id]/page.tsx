@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server";
-import { Topbar } from "@/components/layout/topbar";
+import { PageHeader } from "@/components/layout/page-header";
 import { LoanForm } from "@/components/forms/loan-form";
 import { LoanPayments } from "@/components/finance/loan-payments";
 import { getLoan } from "@/lib/actions/finance";
@@ -36,7 +36,7 @@ export default async function LoanDetailPage({
 
   return (
     <div>
-      <Topbar title={t("editLoan")} showBack />
+      <PageHeader title={t("editLoan")} back />
       <div className="px-4 py-4">
         <LoanForm
           locale={locale}

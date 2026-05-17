@@ -1,12 +1,14 @@
 {
-  "name": "JPR Management",
+  "name": "JPR Farm",
   "short_name": "JPR",
-  "description": "Machinery Rental & Paddy Farm Management",
+  "description": "Machinery rental and paddy farm management",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#121221",
   "orientation": "portrait",
+  "theme_color": "#16a34a",
+  "background_color": "#f8fafc",
+  "lang": "ta",
+  "dir": "ltr",
   "icons": [
     {
       "src": "/icons/icon-72.png",

@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server";
-import { Topbar } from "@/components/layout/topbar";
+import { PageHeader } from "@/components/layout/page-header";
 import { getLogHistory } from "@/lib/actions/daily-logs";
 import { CheckCircle2, Clock, Fuel, Gauge, CheckCheck, RefreshCw } from "lucide-react";
 
@@ -17,7 +17,7 @@ export default async function OperatorHistoryPage() {
 
   return (
     <div>
-      <Topbar title={t("history")} showBack />
+      <PageHeader title={t("history")} back />
       <div className="px-4 py-6 space-y-3">
         {logs.length === 0 ? (
           <div className="text-center py-12 text-muted-foreground">

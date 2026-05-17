@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server";
-import { Topbar } from "@/components/layout/topbar";
+import { PageHeader } from "@/components/layout/page-header";
 import { ReceivableForm } from "@/components/forms/receivable-form";
 import { ReceivablePayments } from "@/components/finance/receivable-payments";
 import { getReceivable } from "@/lib/actions/finance";
@@ -35,7 +35,7 @@ export default async function ReceivableDetailPage({
 
   return (
     <div>
-      <Topbar title={t("editReceivable")} showBack />
+      <PageHeader title={t("editReceivable")} back />
       <div className="px-4 py-4">
         <ReceivableForm
           locale={locale}

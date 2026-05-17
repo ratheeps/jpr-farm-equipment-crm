@@ -9,6 +9,7 @@
     "loading": "Loading...",
     "confirm": "Confirm",
     "search": "Search",
+    "clearSearch": "Clear search",
     "filter": "Filter",
     "noData": "No data found",
     "error": "An error occurred",
@@ -79,7 +80,11 @@
     "loans": "Loans",
     "receivables": "Receivables",
     "notifications": "Notifications",
-    "cashTransactions": "Cash Transactions"
+    "cashTransactions": "Cash Transactions",
+    "home": "Home",
+    "cash": "Cash",
+    "newJob": "New job",
+    "newReceipt": "New receipt"
   },
   "vehicles": {
     "title": "Vehicles",
@@ -138,7 +143,8 @@
       "super_admin": "Super Admin",
       "admin": "Admin",
       "operator": "Operator",
-      "auditor": "Auditor"
+      "auditor": "Auditor",
+      "finance": "Finance"
     },
     "payTypes": {
       "hourly": "Hourly",
@@ -148,7 +154,19 @@
     },
     "deactivate": "Deactivate",
     "noStaff": "No staff members yet",
-    "noStaffDesc": "Add your first staff member to get started"
+    "noStaffDesc": "Add your first staff member to get started",
+    "errors": {
+      "fullNameRequired": "Full name is required",
+      "phoneRequired": "Phone is required",
+      "phoneInvalid": "Phone must be 10 digits",
+      "phoneDuplicate": "Phone is already in use",
+      "passwordRequired": "Password is required",
+      "passwordTooShort": "Password must be at least 6 characters",
+      "roleRequired": "Role is required",
+      "payTypeRequired": "Pay type is required",
+      "payRateInvalid": "Pay rate must be a valid number",
+      "forbidden": "You don't have permission to do this"
+    }
   },
   "operator": {
     "startWork": "Start Work",
@@ -160,6 +178,8 @@
     "kmTraveled": "KM Traveled",
     "acresWorked": "Acres Worked",
     "todayLog": "Today's Log",
+    "ongoingWorks": "Ongoing Works",
+    "noOngoingWorks": "No ongoing works assigned to you",
     "noAssignment": "No assignment today",
     "gpsCapturing": "Capturing location...",
     "offlineSaved": "Saved offline",
@@ -503,6 +523,8 @@
     "rate": "Rate",
     "lineAmount": "Amount",
     "noItems": "Add at least one line item",
+    "fromLog": "From log",
+    "noUninvoicedLogs": "No uninvoiced logs for this project",
     "noInvoices": "No invoices yet",
     "noInvoicesDesc": "Create your first invoice to start billing clients",
     "payments": "Payments",
@@ -522,7 +544,8 @@
       "hours": "Hours",
       "acres": "Acres",
       "km": "KM",
-      "tasks": "Tasks"
+      "tasks": "Tasks",
+      "mobilization": "Mobilization"
     },
     "statuses": {
       "draft": "Draft",
@@ -662,5 +685,30 @@
     "syncStatus": "Sync Status",
     "applyFilters": "Apply",
     "resetFilters": "Reset"
+  },
+  "forms": {
+    "next": "Next",
+    "stepProgress": "Step {current} of {total}",
+    "couldNotLoad": "Could not load",
+    "errorRetryHint": "Try again or save offline.",
+    "tryAgain": "Try again",
+    "addPhoto": "Add photo",
+    "continueFromYesterday": "Continue from yesterday?",
+    "yesContinue": "Yes, continue",
+    "change": "Change",
+    "close": "Close"
+  },
+  "offlineBanner": {
+    "syncingPending": "Syncing · {count} pending",
+    "offlineUnsynced": "{base} · {count} unsynced"
+  },
+  "installPrompt": {
+    "title": "Install JPR Farm",
+    "descriptionDefault": "Works offline. Faster to open than a browser tab.",
+    "iosHint": "Tap the Share icon, then choose Add to Home Screen.",
+    "iosSteps": "Share → Add to Home Screen",
+    "later": "Later",
+    "install": "Install",
+    "gotIt": "Got it"
   }
 }

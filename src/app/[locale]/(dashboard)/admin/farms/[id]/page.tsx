@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server";
-import { Topbar } from "@/components/layout/topbar";
+import { PageHeader } from "@/components/layout/page-header";
 import { FarmForm } from "@/components/forms/farm-form";
 import { FarmCycles } from "@/components/farms/farm-cycles";
 import { FarmSummary } from "@/components/farms/farm-summary";
@@ -30,7 +30,7 @@ export default async function FarmDetailPage({
 
   return (
     <div>
-      <Topbar title={t("edit")} showBack />
+      <PageHeader title={t("edit")} back />
       <div className="px-4 py-4">
         {summary && (summary.totalInputCost > 0 || summary.totalRevenue > 0) && (
           <FarmSummary summary={summary} />

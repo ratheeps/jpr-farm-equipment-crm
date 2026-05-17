@@ -11,6 +11,7 @@ import { syncStatusEnum } from "./enums";
 import { vehicles } from "./vehicles";
 import { staffProfiles } from "./staff";
 import { projects } from "./projects";
+import { invoices } from "./invoices";
 
 export const dailyLogs = pgTable("daily_logs", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -41,6 +42,7 @@ export const dailyLogs = pgTable("daily_logs", {
   notes: text("notes"),
   syncStatus: syncStatusEnum("sync_status").notNull().default("synced"),
   clientDeviceId: text("client_device_id"), // for offline conflict resolution
+  invoiceId: uuid("invoice_id").references(() => invoices.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -57,5 +59,9 @@ export const dailyLogsRelations = relations(dailyLogs, ({ one }) => ({
   project: one(projects, {
     fields: [dailyLogs.projectId],
     references: [projects.id],
+  }),
+  invoice: one(invoices, {
+    fields: [dailyLogs.invoiceId],
+    references: [invoices.id],
   }),
 }));

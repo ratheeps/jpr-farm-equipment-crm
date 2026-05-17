@@ -14,7 +14,6 @@ import { requireSession, isRole } from "@/lib/auth/session";
 import { hashPassword } from "@/lib/auth/password";
 import { eq, and, desc, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { validateStaff } from "@/lib/validations";
 import { logAudit } from "@/lib/audit";
 
 export type StaffFormData = {
@@ -28,6 +27,49 @@ export type StaffFormData = {
   payRate?: string;
   payType: string;
 };
+
+export type StaffActionResult =
+  | { ok: true }
+  | { ok: false; fieldErrors?: Record<string, string>; formError?: string };
+
+const USER_ROLES = ["super_admin", "admin", "operator", "auditor", "finance"] as const;
+const PAY_TYPES = ["hourly", "daily", "monthly", "per_acre"] as const;
+const LOCALES = ["ta", "si", "en"] as const;
+
+// Field-level validation. Keys map to messages in messages/*.json -> staff.errors.<key>.
+function validateStaffFields(
+  data: StaffFormData,
+  opts: { requirePassword: boolean }
+): Record<string, string> {
+  const errors: Record<string, string> = {};
+  if (!data.fullName?.trim()) errors.fullName = "fullNameRequired";
+  if (!data.phone?.trim()) errors.phone = "phoneRequired";
+  else if (!/^\d{10}$/.test(data.phone.trim())) errors.phone = "phoneInvalid";
+  if (opts.requirePassword) {
+    if (!data.password) errors.password = "passwordRequired";
+    else if (data.password.length < 6) errors.password = "passwordTooShort";
+  }
+  if (!data.role || !USER_ROLES.includes(data.role as typeof USER_ROLES[number]))
+    errors.role = "roleRequired";
+  if (!data.payType || !PAY_TYPES.includes(data.payType as typeof PAY_TYPES[number]))
+    errors.payType = "payTypeRequired";
+  if (
+    data.preferredLocale &&
+    !LOCALES.includes(data.preferredLocale as typeof LOCALES[number])
+  ) {
+    errors.preferredLocale = "roleRequired";
+  }
+  if (data.payRate && data.payRate.trim() !== "") {
+    const n = Number(data.payRate);
+    if (Number.isNaN(n) || n < 0) errors.payRate = "payRateInvalid";
+  }
+  return errors;
+}
+
+function isUniqueViolation(e: unknown, constraint: string): boolean {
+  const err = e as { code?: string; constraint?: string } | undefined;
+  return err?.code === "23505" && err?.constraint === constraint;
+}
 
 // ─── Internal tx-aware helpers ────────────────────────────────────────────────
 
@@ -55,77 +97,113 @@ async function getStaffTx(tx: DB, userId: string) {
 
 // ─── Exported actions ─────────────────────────────────────────────────────────
 
-export async function createStaff(data: StaffFormData) {
+export async function createStaff(
+  data: StaffFormData
+): Promise<StaffActionResult> {
   const session = await requireSession();
   if (!isRole(session, "super_admin", "admin")) {
-    throw new Error("Forbidden");
+    return { ok: false, formError: "forbidden" };
   }
 
-  const validated = validateStaff(data);
-  if (!validated.password) throw new Error("Password is required");
-  if (validated.password.length < 6)
-    throw new Error("Password must be at least 6 characters");
+  const fieldErrors = validateStaffFields(data, { requirePassword: true });
+  if (Object.keys(fieldErrors).length > 0) {
+    return { ok: false, fieldErrors };
+  }
 
-  const passwordHash = await hashPassword(validated.password);
+  const passwordHash = await hashPassword(data.password!);
+  const phone = data.phone.trim();
+  const staffPhone = data.staffPhone?.trim() || phone;
 
-  await withRLS(session.userId, session.role, async (tx) => {
-    const [user] = await tx
-      .insert(users)
-      .values({
-        phone: validated.phone,
-        passwordHash,
-        role: validated.role as never,
-        preferredLocale: validated.preferredLocale as never,
-      })
-      .returning({ id: users.id });
+  try {
+    await withRLS(session.userId, session.role, async (tx) => {
+      const [user] = await tx
+        .insert(users)
+        .values({
+          phone,
+          passwordHash,
+          role: data.role as never,
+          preferredLocale: data.preferredLocale as never,
+        })
+        .returning({ id: users.id });
 
-    await tx.insert(staffProfiles).values({
-      userId: user.id,
-      fullName: validated.fullName,
-      phone: validated.staffPhone ?? validated.phone,
-      nicNumber: validated.nicNumber ?? null,
-      payRate: validated.payRate ?? null,
-      payType: validated.payType as never,
+      await tx.insert(staffProfiles).values({
+        userId: user.id,
+        fullName: data.fullName.trim(),
+        phone: staffPhone,
+        nicNumber: data.nicNumber?.trim() || null,
+        payRate: data.payRate?.trim() || null,
+        payType: data.payType as never,
+      });
+
+      await logAudit(tx, "create", "users", user.id, session.userId, undefined, {
+        phone,
+        role: data.role,
+      });
     });
-
-    await logAudit(tx, "create", "users", user.id, session.userId, undefined, { phone: validated.phone, role: validated.role });
-  });
+  } catch (e) {
+    if (isUniqueViolation(e, "users_phone_unique")) {
+      return { ok: false, fieldErrors: { phone: "phoneDuplicate" } };
+    }
+    throw e;
+  }
 
   revalidatePath("/admin/staff");
+  return { ok: true };
 }
 
-export async function updateStaff(userId: string, data: Omit<StaffFormData, "password">) {
+export async function updateStaff(
+  userId: string,
+  data: Omit<StaffFormData, "password">
+): Promise<StaffActionResult> {
   const session = await requireSession();
   if (!isRole(session, "super_admin", "admin")) {
-    throw new Error("Forbidden");
+    return { ok: false, formError: "forbidden" };
   }
 
-  await withRLS(session.userId, session.role, async (tx) => {
-    await tx
-      .update(users)
-      .set({
-        role: data.role as never,
-        preferredLocale: data.preferredLocale as never,
-        updatedAt: new Date(),
-      })
-      .where(eq(users.id, userId));
+  const fieldErrors = validateStaffFields(
+    { ...data, password: "_skip_" } as StaffFormData,
+    { requirePassword: false }
+  );
+  if (Object.keys(fieldErrors).length > 0) {
+    return { ok: false, fieldErrors };
+  }
 
-    await tx
-      .update(staffProfiles)
-      .set({
-        fullName: data.fullName,
-        phone: data.staffPhone || data.phone,
-        nicNumber: data.nicNumber || null,
-        payRate: data.payRate || null,
-        payType: data.payType as never,
-        updatedAt: new Date(),
-      })
-      .where(eq(staffProfiles.userId, userId));
+  const staffPhone = data.staffPhone?.trim() || data.phone.trim();
 
-    await logAudit(tx, "update", "users", userId, session.userId);
-  });
+  try {
+    await withRLS(session.userId, session.role, async (tx) => {
+      await tx
+        .update(users)
+        .set({
+          role: data.role as never,
+          preferredLocale: data.preferredLocale as never,
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, userId));
+
+      await tx
+        .update(staffProfiles)
+        .set({
+          fullName: data.fullName.trim(),
+          phone: staffPhone,
+          nicNumber: data.nicNumber?.trim() || null,
+          payRate: data.payRate?.trim() || null,
+          payType: data.payType as never,
+          updatedAt: new Date(),
+        })
+        .where(eq(staffProfiles.userId, userId));
+
+      await logAudit(tx, "update", "users", userId, session.userId);
+    });
+  } catch (e) {
+    if (isUniqueViolation(e, "users_phone_unique")) {
+      return { ok: false, fieldErrors: { phone: "phoneDuplicate" } };
+    }
+    throw e;
+  }
 
   revalidatePath("/admin/staff");
+  return { ok: true };
 }
 
 export async function getStaffList() {

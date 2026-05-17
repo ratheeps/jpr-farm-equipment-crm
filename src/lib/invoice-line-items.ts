@@ -1,4 +1,5 @@
 export interface InvoiceLogRow {
+  id: string;
   date: string;
   startEngineHours: string | null;
   endEngineHours: string | null;
@@ -18,6 +19,7 @@ export interface LineItem {
   unit: string;
   rate: string;
   amount: string;
+  sourceLogId?: string;
 }
 
 function getOutputAndRate(log: InvoiceLogRow): { quantity: string; unit: string; rate: string } {
@@ -50,6 +52,7 @@ export function buildInvoiceLineItems(
       unit,
       rate,
       amount,
+      sourceLogId: log.id,
     };
   });
   return [...preambleItems, ...logItems];

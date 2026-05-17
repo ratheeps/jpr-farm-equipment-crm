@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server";
-import { Topbar } from "@/components/layout/topbar";
+import { PageHeader } from "@/components/layout/page-header";
 import { getLoans, getReceivables, getFinanceSummary } from "@/lib/actions/finance";
 import { getSession } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
@@ -40,7 +40,7 @@ export default async function AuditorFinancePage({
 
   return (
     <div>
-      <Topbar title={t("title")} showBack />
+      <PageHeader title={t("title")} back />
       <div className="px-4 py-4 space-y-5">
 
         {/* Summary card */}

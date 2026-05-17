@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server";
-import { Topbar } from "@/components/layout/topbar";
+import { PageHeader } from "@/components/layout/page-header";
 import { OfflineBanner } from "@/components/offline-banner";
 import { ExpenseForm } from "@/components/operator/expense-form";
 import { getMyExpenses } from "@/lib/actions/expenses";
@@ -44,7 +44,7 @@ export default async function OperatorExpensesPage() {
 
   return (
     <div>
-      <Topbar title={t("expenses")} showBack />
+      <PageHeader title={t("expenses")} back />
       <OfflineBanner />
       <div className="px-4 py-6 space-y-4">
         {/* Today's total */}

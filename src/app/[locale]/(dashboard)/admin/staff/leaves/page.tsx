@@ -1,4 +1,4 @@
-import { Topbar } from "@/components/layout/topbar";
+import { PageHeader } from "@/components/layout/page-header";
 import { getSession } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
 import { getLeaves } from "@/lib/actions/leaves";
@@ -24,7 +24,7 @@ export default async function StaffLeavesPage({
 
   return (
     <div>
-      <Topbar title="Leave Requests" showBack />
+      <PageHeader title="Leave Requests" back />
       <div className="px-4 py-4 space-y-6">
         {allLeaves.length === 0 && (
           <p className="text-center text-sm text-muted-foreground py-12">

@@ -1,4 +1,4 @@
-import { Topbar } from "@/components/layout/topbar";
+import { PageHeader } from "@/components/layout/page-header";
 import { getSession } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
 import { getCompanySettings } from "@/lib/actions/company-settings";
@@ -20,7 +20,7 @@ export default async function CompanySettingsPage({
 
   return (
     <div>
-      <Topbar title="Company Settings" showBack />
+      <PageHeader title="Company Settings" back />
       <div className="px-4 py-4">
         <CompanySettingsForm settings={settings} />
       </div>

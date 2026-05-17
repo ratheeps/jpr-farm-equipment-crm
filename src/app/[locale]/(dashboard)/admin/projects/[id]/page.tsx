@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server";
-import { Topbar } from "@/components/layout/topbar";
+import { PageHeader } from "@/components/layout/page-header";
 import { ProjectForm } from "@/components/forms/project-form";
 import { ProjectAssignments } from "@/components/projects/project-assignments";
 import { GenerateInvoiceButton } from "@/components/projects/generate-invoice-button";
@@ -39,7 +39,7 @@ export default async function ProjectDetailPage({
 
   return (
     <div>
-      <Topbar title={t("edit")} showBack />
+      <PageHeader title={t("edit")} back />
       <div className="px-4 py-4">
         {/* Generate Invoice button */}
         <div className="mb-4">

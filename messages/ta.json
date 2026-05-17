@@ -9,6 +9,7 @@
     "loading": "ஏற்றுகிறது...",
     "confirm": "உறுதிப்படுத்து",
     "search": "தேடு",
+    "clearSearch": "தேடலை அழி",
     "filter": "வடிகட்டு",
     "noData": "தரவு இல்லை",
     "error": "பிழை ஏற்பட்டது",
@@ -77,9 +78,13 @@
     "leave": "விடுப்பு கோரிக்கை",
     "auditorFinance": "நிதி",
     "loans": "Loans",
-    "receivables": "Receivables",
+    "receivables": "பெறத்தக்கவை",
     "notifications": "Notifications",
-    "cashTransactions": "Cash Transactions"
+    "cashTransactions": "Cash Transactions",
+    "home": "முகப்பு",
+    "cash": "பணம்",
+    "newJob": "புதிய வேலை",
+    "newReceipt": "புதிய ரசீது"
   },
   "vehicles": {
     "title": "வாகனங்கள்",
@@ -138,7 +143,8 @@
       "super_admin": "உயர் நிர்வாகி",
       "admin": "நிர்வாகி",
       "operator": "இயக்குனர்",
-      "auditor": "தணிக்கையாளர்"
+      "auditor": "தணிக்கையாளர்",
+      "finance": "நிதி"
     },
     "payTypes": {
       "hourly": "மணி நேரம்",
@@ -148,7 +154,19 @@
     },
     "deactivate": "செயலிழக்கச் செய்",
     "noStaff": "ஊழியர்கள் இல்லை",
-    "noStaffDesc": "முதல் ஊழியரை சேர்க்கவும்"
+    "noStaffDesc": "முதல் ஊழியரை சேர்க்கவும்",
+    "errors": {
+      "fullNameRequired": "முழு பெயர் தேவை",
+      "phoneRequired": "தொலைபேசி தேவை",
+      "phoneInvalid": "தொலைபேசி 10 இலக்கங்கள் இருக்க வேண்டும்",
+      "phoneDuplicate": "இந்த தொலைபேசி ஏற்கனவே பயன்பாட்டில் உள்ளது",
+      "passwordRequired": "கடவுச்சொல் தேவை",
+      "passwordTooShort": "கடவுச்சொல் குறைந்தது 6 எழுத்துகள் இருக்க வேண்டும்",
+      "roleRequired": "பங்கு தேவை",
+      "payTypeRequired": "ஊதிய வகை தேவை",
+      "payRateInvalid": "ஊதிய விகிதம் சரியான எண்ணாக இருக்க வேண்டும்",
+      "forbidden": "இதை செய்ய உங்களுக்கு அனுமதி இல்லை"
+    }
   },
   "operator": {
     "startWork": "வேலை தொடங்கு",
@@ -160,6 +178,8 @@
     "kmTraveled": "கடந்த கி.மீ.",
     "acresWorked": "வேலை செய்த ஏக்கர்",
     "todayLog": "இன்றைய பதிவு",
+    "ongoingWorks": "தற்போதைய பணிகள்",
+    "noOngoingWorks": "உங்களுக்கு ஒதுக்கப்பட்ட பணிகள் எதுவும் இல்லை",
     "noAssignment": "இன்று ஒதுக்கீடு இல்லை",
     "gpsCapturing": "இடம் பதிவு செய்கிறது...",
     "offlineSaved": "ஆஃப்லைனில் சேமிக்கப்பட்டது",
@@ -503,6 +523,8 @@
     "rate": "விகிதம்",
     "lineAmount": "தொகை",
     "noItems": "குறைந்தது ஒரு வரி சேர்க்கவும்",
+    "fromLog": "பதிவில் இருந்து",
+    "noUninvoicedLogs": "இந்தத் திட்டத்திற்கு விலைப்பட்டியலிடப்படாத பதிவுகள் இல்லை",
     "noInvoices": "இன்வாய்சுகள் இல்லை",
     "noInvoicesDesc": "வாடிக்கையாளர்களுக்கு பில் செய்ய முதல் இன்வாய்சை உருவாக்கவும்",
     "payments": "கட்டணங்கள்",
@@ -522,7 +544,8 @@
       "hours": "மணிநேரம்",
       "acres": "ஏக்கர்",
       "km": "கி.மீ.",
-      "tasks": "பணிகள்"
+      "tasks": "பணிகள்",
+      "mobilization": "இடமாற்றம்"
     },
     "statuses": {
       "draft": "வரைவு",
@@ -662,5 +685,30 @@
     "syncStatus": "ஒத்திசைவு நிலை",
     "applyFilters": "பொருத்து",
     "resetFilters": "மீட்டமை"
+  },
+  "forms": {
+    "next": "அடுத்து",
+    "stepProgress": "படி {current} / {total}",
+    "couldNotLoad": "ஏற்ற முடியவில்லை",
+    "errorRetryHint": "மீண்டும் முயற்சிக்கவும் அல்லது ஆஃப்லைனில் சேமிக்கவும்.",
+    "tryAgain": "மீண்டும் முயற்சி",
+    "addPhoto": "புகைப்படம் சேர்",
+    "continueFromYesterday": "நேற்றிலிருந்து தொடரவா?",
+    "yesContinue": "ஆம், தொடரு",
+    "change": "மாற்று",
+    "close": "மூடு"
+  },
+  "offlineBanner": {
+    "syncingPending": "ஒத்திசைகிறது · {count} நிலுவை",
+    "offlineUnsynced": "{base} · {count} ஒத்திசைக்காதவை"
+  },
+  "installPrompt": {
+    "title": "JPR Farm நிறுவ",
+    "descriptionDefault": "ஆஃப்லைனில் வேலை செய்யும். உலாவித் தாவலை விட வேகமாக.",
+    "iosHint": "Share ஐகானைத் தட்டி, Add to Home Screen-ஐ தேர்ந்தெடுக்கவும்.",
+    "iosSteps": "Share → Add to Home Screen",
+    "later": "பிறகு",
+    "install": "நிறுவு",
+    "gotIt": "புரிந்தது"
   }
 }

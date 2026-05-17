@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server";
-import { Topbar } from "@/components/layout/topbar";
+import { PageHeader } from "@/components/layout/page-header";
 import { getProjects } from "@/lib/actions/projects";
 import Link from "next/link";
 import { Plus, FolderKanban } from "lucide-react";
@@ -27,7 +27,7 @@ export default async function ProjectsPage({
 
   return (
     <div>
-      <Topbar title={t("title")} />
+      <PageHeader title={t("title")} />
       <div className="px-4 py-4">
         <Link
           href={`/${locale}/admin/projects/new`}

@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server";
-import { Topbar } from "@/components/layout/topbar";
+import { PageHeader } from "@/components/layout/page-header";
 import { FileText, TrendingUp, ArrowRightLeft, Download } from "lucide-react";
 import Link from "next/link";
 
@@ -45,7 +45,7 @@ export default async function AuditorDashboard({
 
   return (
     <div>
-      <Topbar title="JPR" />
+      <PageHeader title="JPR" />
       <div className="px-4 py-6 space-y-4">
         <p className="text-sm text-muted-foreground">
           Read-only financial view

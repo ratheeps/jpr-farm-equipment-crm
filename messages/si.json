@@ -9,6 +9,7 @@
     "loading": "පූරණය වෙමින්...",
     "confirm": "තහවුරු කරන්න",
     "search": "සොයන්න",
+    "clearSearch": "සෙවුම ඉවත් කරන්න",
     "filter": "පෙරහන",
     "noData": "දත්ත නොමැත",
     "error": "දෝෂයක් සිදු විය",
@@ -77,9 +78,13 @@
     "leave": "නිවාඩු ඉල්ලීම",
     "auditorFinance": "මූල්‍ය",
     "loans": "Loans",
-    "receivables": "Receivables",
+    "receivables": "ලැබිය යුතු",
     "notifications": "Notifications",
-    "cashTransactions": "Cash Transactions"
+    "cashTransactions": "Cash Transactions",
+    "home": "මුල් පිටුව",
+    "cash": "මුදල්",
+    "newJob": "නව රැකියාව",
+    "newReceipt": "නව රිසිට්පත"
   },
   "vehicles": {
     "title": "යාත්‍රා",
@@ -138,7 +143,8 @@
       "super_admin": "ප්‍රධාන පරිපාලක",
       "admin": "පරිපාලක",
       "operator": "ක්‍රියාකරු",
-      "auditor": "විගණකයා"
+      "auditor": "විගණකයා",
+      "finance": "මුදල්"
     },
     "payTypes": {
       "hourly": "පැය",
@@ -148,7 +154,19 @@
     },
     "deactivate": "ක්‍රියාකාරී ඳෙල්ලා",
     "noStaff": "කාර්ය මණ්ඩලය නොමැත",
-    "noStaffDesc": "පලමවර් සේවකයා එකතු කරන්න"
+    "noStaffDesc": "පලමවර් සේවකයා එකතු කරන්න",
+    "errors": {
+      "fullNameRequired": "සම්පූර්ණ නම අවශ්‍යයි",
+      "phoneRequired": "දුරකථන අංකය අවශ්‍යයි",
+      "phoneInvalid": "දුරකථන අංකය ඉලක්කම් 10ක් විය යුතුයි",
+      "phoneDuplicate": "මෙම දුරකථන අංකය දැනටමත් භාවිතයේ පවතී",
+      "passwordRequired": "මුරපදය අවශ්‍යයි",
+      "passwordTooShort": "මුරපදය අවම වශයෙන් අකුරු 6ක් විය යුතුයි",
+      "roleRequired": "භූමිකාව අවශ්‍යයි",
+      "payTypeRequired": "ගෙවීම් වර්ගය අවශ්‍යයි",
+      "payRateInvalid": "වේතන අනුපාතය වලංගු සංඛ්‍යාවක් විය යුතුයි",
+      "forbidden": "මෙය කිරීමට ඔබට අවසර නැත"
+    }
   },
   "operator": {
     "startWork": "කාර්යය ආරම්භ කරන්න",
@@ -160,6 +178,8 @@
     "kmTraveled": "ගිය කි.මී.",
     "acresWorked": "වැඩ කළ අක්කර",
     "todayLog": "අද ලොගය",
+    "ongoingWorks": "ක්‍රියාත්මක කාර්යයන්",
+    "noOngoingWorks": "ඔබට පවරා ඇති ක්‍රියාත්මක කාර්යයන් නැත",
     "noAssignment": "අද පැවරීමක් නැත",
     "gpsCapturing": "ස්ථානය වාර්තා කරමින්...",
     "offlineSaved": "නොබැඳි ලෙස සුරකිනු ලැබේ",
@@ -503,6 +523,8 @@
     "rate": "අනුපාතය",
     "lineAmount": "මුදල",
     "noItems": "අවම වශයෙන් එක් ලයිනයක් එකතු කරන්න",
+    "fromLog": "ලොගයෙන්",
+    "noUninvoicedLogs": "මෙම ව්‍යාපෘතිය සඳහා ඉන්වොයිස් නොකළ ලොග් නැත",
     "noInvoices": "ඉන්වොයිස් නොමැත",
     "noInvoicesDesc": "ගනුදහන්නට කයය් සදහන්න පලමවර් ඉන්වෝයිස්වක් සණන්න",
     "payments": "ගෙවීම්",
@@ -522,7 +544,8 @@
       "hours": "පැය",
       "acres": "අක්කර",
       "km": "කි.මී.",
-      "tasks": "කාර්ය"
+      "tasks": "කාර්ය",
+      "mobilization": "මොබිලයිසේෂන්"
     },
     "statuses": {
       "draft": "කෙටුම්පත",
@@ -662,5 +685,30 @@
     "syncStatus": "සමමුහුර්ත තත්ත්වය",
     "applyFilters": "යොදන්න",
     "resetFilters": "නැවත සකසන්න"
+  },
+  "forms": {
+    "next": "ඊළඟ",
+    "stepProgress": "පියවර {current} / {total}",
+    "couldNotLoad": "පූරණය කළ නොහැක",
+    "errorRetryHint": "නැවත උත්සාහ කරන්න හෝ නොබැඳිව සුරකින්න.",
+    "tryAgain": "නැවත උත්සාහ කරන්න",
+    "addPhoto": "ඡායාරූපය එක් කරන්න",
+    "continueFromYesterday": "ඊයේ සිට ඉදිරියට යනවාද?",
+    "yesContinue": "ඔව්, ඉදිරියට යන්න",
+    "change": "වෙනස් කරන්න",
+    "close": "වසන්න"
+  },
+  "offlineBanner": {
+    "syncingPending": "සමමුහූර්තය · {count} පොරොත්තුවෙන්",
+    "offlineUnsynced": "{base} · {count} සමමුහූර්ත නොකළ"
+  },
+  "installPrompt": {
+    "title": "JPR Farm ස්ථාපනය කරන්න",
+    "descriptionDefault": "නොබැඳිව ක්‍රියා කරයි. බ්‍රවුසරයේ ටැබයකට වඩා වේගවත්.",
+    "iosHint": "Share අයිකනය ස්පර්ශ කර, මුල් තිරයට එක් කරන්න තෝරන්න.",
+    "iosSteps": "Share → මුල් තිරයට එක් කරන්න",
+    "later": "පසුව",
+    "install": "ස්ථාපනය කරන්න",
+    "gotIt": "තේරුණා"
   }
 }

@@ -1,97 +1,60 @@
 "use client";
 
-import { useRouter, useParams } from "next/navigation";
-import { useTranslations } from "next-intl";
-import { LanguageSwitcher } from "./language-switcher";
-import { LogOut, ArrowLeft, Moon, Sun } from "lucide-react";
-import { useEffect, useState } from "react";
-import Image from "next/image";
+import * as React from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { ChevronLeft } from "lucide-react";
+import { cn } from "@/lib/utils";
 
-interface TopbarProps {
+interface TopBarProps {
   title?: string;
-  showBack?: boolean;
+  back?: boolean | string;
+  right?: React.ReactNode;
+  brand?: boolean;
+  className?: string;
 }
 
-export function Topbar({ title, showBack }: TopbarProps) {
-  const t = useTranslations("auth");
-  const tCommon = useTranslations("common");
+export function TopBar({
+  title,
+  back,
+  right,
+  brand = false,
+  className,
+}: TopBarProps) {
   const router = useRouter();
-  const { locale } = useParams<{ locale: string }>();
-
-  const [dark, setDark] = useState(false);
-
-  useEffect(() => {
-    const stored = localStorage.getItem("theme");
-    const isDark = stored === "dark" || (!stored && window.matchMedia("(prefers-color-scheme: dark)").matches);
-    setDark(isDark);
-    document.documentElement.classList.toggle("dark", isDark);
-  }, []);
-
-  function toggleDark() {
-    const next = !dark;
-    setDark(next);
-    document.documentElement.classList.toggle("dark", next);
-    localStorage.setItem("theme", next ? "dark" : "light");
-  }
-
-  async function handleLogout() {
-    await fetch("/api/auth/logout", { method: "POST" });
-    router.replace(`/${locale}/login`);
-  }
-
   return (
-    <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-md border-b border-border/60 shadow-sm">
-      <div className="flex items-center h-14 px-3 gap-2">
-
-        {/* Left: back button or logo mark */}
-        {showBack ? (
-          <button
-            onClick={() => router.back()}
-            className="flex items-center gap-1.5 h-9 pl-2 pr-3 rounded-xl bg-secondary text-secondary-foreground font-medium text-sm shrink-0 active:scale-95 transition-transform"
+    <header
+      className={cn(
+        "sticky top-0 z-30 flex h-14 items-center gap-2 bg-background/95 px-3 pt-safe backdrop-blur",
+        className
+      )}
+    >
+      {back ? (
+        typeof back === "string" ? (
+          <Link
+            href={back}
+            aria-label="Back"
+            className="flex h-11 w-11 items-center justify-center rounded-md text-foreground"
           >
-            <ArrowLeft className="h-4 w-4" />
-            {tCommon("back")}
-          </button>
+            <ChevronLeft className="h-5 w-5" />
+          </Link>
         ) : (
-          <div className="shrink-0">
-            <Image
-              src="/app-logo.png"
-              alt="JPR"
-              width={32}
-              height={32}
-              className="rounded-lg"
-              priority
-            />
-          </div>
-        )}
-
-        {/* Title */}
-        {title && (
-          <h1 className="font-bold text-foreground flex-1 truncate text-[15px] px-1">
-            {title}
-          </h1>
-        )}
-
-        {/* Right: language switcher + dark mode + logout */}
-        <div className="ml-auto flex items-center gap-1.5 shrink-0">
-          <LanguageSwitcher />
           <button
-            onClick={toggleDark}
-            className="h-9 w-9 flex items-center justify-center rounded-xl bg-secondary text-muted-foreground hover:bg-secondary/80 active:scale-95 transition-all"
-            title={dark ? "Light mode" : "Dark mode"}
+            type="button"
+            onClick={() => router.back()}
+            aria-label="Back"
+            className="flex h-11 w-11 items-center justify-center rounded-md text-foreground"
           >
-            {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            <ChevronLeft className="h-5 w-5" />
           </button>
-          <button
-            onClick={handleLogout}
-            className="h-9 w-9 flex items-center justify-center rounded-xl bg-secondary text-muted-foreground hover:bg-destructive/10 hover:text-destructive active:scale-95 transition-all"
-            title={t("logout")}
-          >
-            <LogOut className="h-4 w-4" />
-          </button>
-        </div>
-
-      </div>
+        )
+      ) : null}
+      {brand ? (
+        <span className="text-base font-extrabold tracking-tight">JPR Farm</span>
+      ) : title ? (
+        <h1 className="truncate text-base font-semibold">{title}</h1>
+      ) : null}
+      {right && <div className="ml-auto flex items-center gap-1">{right}</div>}
     </header>
   );
 }

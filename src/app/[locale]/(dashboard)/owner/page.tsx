@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server";
-import { Topbar } from "@/components/layout/topbar";
+import { PageHeader } from "@/components/layout/page-header";
 import { db } from "@/db";
 import { vehicles, projects, loans, receivables, paddyFarms, maintenanceSchedules } from "@/db/schema";
 import { eq, count, sum, and } from "drizzle-orm";
@@ -63,7 +63,7 @@ export default async function OwnerDashboard({
 
   return (
     <div>
-      <Topbar title="JPR Management" />
+      <PageHeader title="JPR Management" />
       <div className="px-4 py-4 space-y-4">
         {/* Summary cards row */}
         <div className="grid grid-cols-2 gap-3">

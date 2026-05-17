@@ -28,8 +28,13 @@ export async function withRLS<T>(
   fn: (tx: typeof db) => Promise<T>
 ): Promise<T> {
   return db.transaction(async (tx) => {
-    await tx.execute(sql`SET LOCAL app.current_user_id = ${userId}`);
-    await tx.execute(sql`SET LOCAL app.current_user_role = ${role}`);
+    // `SET LOCAL` does not accept bind parameters; use set_config(..., true) which does.
+    await tx.execute(
+      sql`SELECT set_config('app.current_user_id', ${userId}, true)`
+    );
+    await tx.execute(
+      sql`SELECT set_config('app.current_user_role', ${role}, true)`
+    );
     return fn(tx as unknown as typeof db);
   });
 }

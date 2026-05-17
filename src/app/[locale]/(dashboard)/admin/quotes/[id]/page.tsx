@@ -1,4 +1,4 @@
-import { Topbar } from "@/components/layout/topbar";
+import { PageHeader } from "@/components/layout/page-header";
 import { QuoteForm } from "@/components/forms/quote-form";
 import { ConvertToInvoiceButton } from "@/components/quotes/convert-button";
 import { QuoteActions } from "@/components/quotes/quote-actions";
@@ -32,7 +32,7 @@ export default async function QuoteDetailPage({
 
   return (
     <div>
-      <Topbar title={quote.quoteNumber} showBack />
+      <PageHeader title={quote.quoteNumber} back />
 
       <QuoteActions
         data={{

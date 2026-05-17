@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Topbar } from "@/components/layout/topbar";
+import { PageHeader } from "@/components/layout/page-header";
 import { changePassword } from "@/lib/actions/auth";
 
 export default function ChangePasswordPage() {
@@ -59,7 +59,7 @@ export default function ChangePasswordPage() {
 
   return (
     <>
-      <Topbar title={t("changePassword")} showBack />
+      <PageHeader title={t("changePassword")} back />
       <div className="p-4 max-w-sm mx-auto mt-2">
         {success ? (
           <div className="rounded-xl bg-primary/10 border border-primary/20 p-4 text-center text-primary font-medium text-sm">

@@ -5,9 +5,10 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { Plus, Trash2 } from "lucide-react";
 import { createInvoice, updateInvoice } from "@/lib/actions/invoices";
+import { getUninvoicedLogsForProject } from "@/lib/actions/invoice-generation";
 
 type InvoiceStatus = "draft" | "sent" | "paid" | "overdue" | "cancelled";
-type Unit = "hours" | "acres" | "km" | "tasks";
+type Unit = "hours" | "acres" | "km" | "tasks" | "mobilization";
 
 type LineItem = {
   id: string;
@@ -16,6 +17,7 @@ type LineItem = {
   unit: Unit | "";
   rate: string;
   amount: string;
+  sourceLogId?: string;
 };
 
 interface Project {
@@ -48,6 +50,7 @@ interface InvoiceFormProps {
       rate: string;
       amount: string;
       sortOrder?: number | null;
+      sourceLogId?: string | null;
     }[];
   };
   generatedNumber?: string;
@@ -97,18 +100,22 @@ export function InvoiceForm({
           unit: (item.unit as Unit) ?? "",
           rate: item.rate,
           amount: item.amount,
+          sourceLogId: item.sourceLogId ?? undefined,
         }))
       : [{ id: crypto.randomUUID(), description: "", quantity: "1", unit: "", rate: "", amount: "" }]
   );
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [itemsTouched, setItemsTouched] = useState(false);
+  const [populating, setPopulating] = useState(false);
 
   function setH(field: string, value: string) {
     setHeader((prev) => ({ ...prev, [field]: value }));
   }
 
   function updateItem(id: string, field: keyof LineItem, value: string) {
+    setItemsTouched(true);
     setItems((prev) =>
       prev.map((item) => {
         if (item.id !== id) return item;
@@ -125,6 +132,7 @@ export function InvoiceForm({
   }
 
   function addItem() {
+    setItemsTouched(true);
     setItems((prev) => [
       ...prev,
       { id: crypto.randomUUID(), description: "", quantity: "1", unit: "", rate: "", amount: "" },
@@ -132,7 +140,45 @@ export function InvoiceForm({
   }
 
   function removeItem(id: string) {
+    setItemsTouched(true);
     setItems((prev) => prev.filter((item) => item.id !== id));
+  }
+
+  async function onProjectChange(newId: string) {
+    setH("projectId", newId);
+    if (!newId) return;
+    if (itemsTouched) return;
+    if (initial?.id) return; // don't auto-populate when editing an existing invoice
+
+    setPopulating(true);
+    setError("");
+    try {
+      const result = await getUninvoicedLogsForProject(newId);
+      const newRows: LineItem[] = [...result.preamble, ...result.items].map((it) => ({
+        id: crypto.randomUUID(),
+        description: it.description,
+        quantity: it.quantity,
+        unit: (it.unit as Unit) ?? "",
+        rate: it.rate,
+        amount: it.amount,
+        sourceLogId: it.sourceLogId,
+      }));
+      if (newRows.length === 0) {
+        setError(t("noUninvoicedLogs"));
+        return;
+      }
+      setItems(newRows);
+      setHeader((prev) => ({
+        ...prev,
+        clientName: prev.clientName || result.clientName,
+        clientPhone: prev.clientPhone || result.clientPhone || "",
+      }));
+      setItemsTouched(false);
+    } catch {
+      setError(tCommon("error"));
+    } finally {
+      setPopulating(false);
+    }
   }
 
   const subtotal = calcSubtotal(items);
@@ -168,6 +214,7 @@ export function InvoiceForm({
           unit: item.unit || undefined,
           rate: item.rate,
           amount: item.amount,
+          sourceLogId: item.sourceLogId,
         })),
       };
 
@@ -185,7 +232,7 @@ export function InvoiceForm({
   }
 
   const statuses: InvoiceStatus[] = ["draft", "sent", "paid", "overdue", "cancelled"];
-  const units: (Unit | "")[] = ["", "hours", "acres", "km", "tasks"];
+  const units: (Unit | "")[] = ["", "hours", "acres", "km", "tasks", "mobilization"];
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5 pb-8">
@@ -203,8 +250,9 @@ export function InvoiceForm({
       <Field label={t("project")}>
         <select
           value={header.projectId}
-          onChange={(e) => setH("projectId", e.target.value)}
-          className="w-full h-12 px-4 border border-input rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring text-base"
+          onChange={(e) => onProjectChange(e.target.value)}
+          disabled={populating}
+          className="w-full h-12 px-4 border border-input rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring text-base disabled:opacity-60"
         >
           <option value="">{t("noProject")}</option>
           {projects.map((p) => (
@@ -213,6 +261,9 @@ export function InvoiceForm({
             </option>
           ))}
         </select>
+        {populating && (
+          <p className="text-xs text-muted-foreground mt-1">{tCommon("loading")}</p>
+        )}
       </Field>
 
       {/* Client */}
@@ -276,14 +327,21 @@ export function InvoiceForm({
               className="bg-secondary/40 border border-border rounded-xl p-3 space-y-2"
             >
               {/* Description */}
-              <input
-                type="text"
-                value={item.description}
-                onChange={(e) => updateItem(item.id, "description", e.target.value)}
-                placeholder={t("description")}
-                required
-                className="w-full h-10 px-3 border border-input rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring text-sm"
-              />
+              <div className="space-y-1">
+                {item.sourceLogId && (
+                  <span className="inline-block text-[10px] px-1.5 py-0.5 bg-primary/10 text-primary rounded-md uppercase tracking-wide font-medium">
+                    {t("fromLog")}
+                  </span>
+                )}
+                <input
+                  type="text"
+                  value={item.description}
+                  onChange={(e) => updateItem(item.id, "description", e.target.value)}
+                  placeholder={t("description")}
+                  required
+                  className="w-full h-10 px-3 border border-input rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring text-sm"
+                />
+              </div>
               {/* Qty / Unit / Rate / Amount */}
               <div className="grid grid-cols-4 gap-2">
                 <div>

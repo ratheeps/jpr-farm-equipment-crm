@@ -1,4 +1,4 @@
-import { Topbar } from "@/components/layout/topbar";
+import { PageHeader } from "@/components/layout/page-header";
 import { getSession } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
 import { getPayrollList } from "@/lib/actions/payroll";
@@ -36,7 +36,7 @@ export default async function PayrollPage({
 
   return (
     <div>
-      <Topbar title="Payroll" showBack />
+      <PageHeader title="Payroll" back />
       <div className="px-4 py-4">
         <PayrollManager
           initialPayroll={payroll}

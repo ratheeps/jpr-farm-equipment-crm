@@ -1,15 +1,17 @@
 /**
- * Sync engine — pushes locally-queued (offline) records to the server
+ * Sync engine - pushes locally-queued (offline) records to the server
  * when network is restored. Call syncAll() on the `online` window event.
  */
 import { localDb } from "./db";
+import { SYNC_SUCCESS_KEY } from "@/lib/install-prompt-storage";
 
-async function syncLogs(): Promise<void> {
+async function syncLogs(): Promise<number> {
   const pending = await localDb.offlineLogs
     .where("syncStatus")
     .equals("local")
     .toArray();
 
+  let synced = 0;
   for (const record of pending) {
     try {
       const res = await fetch("/api/logs/sync", {
@@ -24,21 +26,24 @@ async function syncLogs(): Promise<void> {
           serverId: id,
           syncStatus: "synced",
         });
+        synced += 1;
       } else {
         await localDb.offlineLogs.update(record.id!, { syncStatus: "error" });
       }
     } catch {
-      // Network still unavailable — leave as "local", retry next time
+      // Network still unavailable - leave as "local", retry next time
     }
   }
+  return synced;
 }
 
-async function syncExpenses(): Promise<void> {
+async function syncExpenses(): Promise<number> {
   const pending = await localDb.offlineExpenses
     .where("syncStatus")
     .equals("local")
     .toArray();
 
+  let synced = 0;
   for (const record of pending) {
     try {
       const res = await fetch("/api/expenses/sync", {
@@ -53,6 +58,7 @@ async function syncExpenses(): Promise<void> {
           serverId: id,
           syncStatus: "synced",
         });
+        synced += 1;
       } else {
         await localDb.offlineExpenses.update(record.id!, {
           syncStatus: "error",
@@ -62,10 +68,23 @@ async function syncExpenses(): Promise<void> {
       // Network still unavailable
     }
   }
+  return synced;
 }
 
 export async function syncAll(): Promise<void> {
-  await Promise.all([syncLogs(), syncExpenses()]);
+  try {
+    const [logs, expenses] = await Promise.all([syncLogs(), syncExpenses()]);
+    // Only flip when at least one record actually transitioned local -> synced;
+    // an online event with no pending records or with server errors should not
+    // gate the install prompt.
+    if (typeof window !== "undefined" && logs + expenses > 0) {
+      window.localStorage.setItem(SYNC_SUCCESS_KEY, "1");
+    }
+  } finally {
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("jpr:sync-done"));
+    }
+  }
 }
 
 /**
@@ -82,7 +101,7 @@ export async function registerBackgroundSync(): Promise<void> {
       await (reg as ServiceWorkerRegistration & { sync: { register(tag: string): Promise<void> } }).sync.register("offline-sync");
     }
   } catch {
-    // Not supported or registration failed — the window `online` event fallback handles it
+    // Not supported or registration failed - the window `online` event fallback handles it
   }
 }
 
