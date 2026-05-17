@@ -52,6 +52,54 @@ export async function nextInvoiceNumberTx(tx: DB): Promise<string> {
   return `INV-${ym}-${seq}`;
 }
 
+/**
+ * Release artifacts when an invoice transitions into `cancelled` state:
+ * - Unlink any daily_logs attributed to it (invoice_id = NULL) so they
+ *   resurface in getUninvoicedLogsForProject.
+ * - Conditionally unflip projects.mobilization_billed only if no other
+ *   non-cancelled invoice on the same project still carries a mobilization line.
+ *
+ * Idempotent on already-released invoices.
+ */
+async function releaseInvoiceArtifacts(
+  tx: DB,
+  id: string,
+  projectId: string | null
+) {
+  const mobilizationRows = await tx
+    .select({ id: invoiceItems.id })
+    .from(invoiceItems)
+    .where(and(eq(invoiceItems.invoiceId, id), eq(invoiceItems.unit, "mobilization")));
+  const hadMobilization = mobilizationRows.length > 0;
+
+  await tx
+    .update(dailyLogs)
+    .set({ invoiceId: null, updatedAt: new Date() })
+    .where(eq(dailyLogs.invoiceId, id));
+
+  if (hadMobilization && projectId) {
+    const otherMobilization = await tx
+      .select({ id: invoices.id })
+      .from(invoices)
+      .innerJoin(invoiceItems, eq(invoices.id, invoiceItems.invoiceId))
+      .where(
+        and(
+          eq(invoices.projectId, projectId),
+          eq(invoiceItems.unit, "mobilization"),
+          sql`${invoices.status} <> 'cancelled'`,
+          sql`${invoices.id} <> ${id}`
+        )
+      )
+      .limit(1);
+    if (otherMobilization.length === 0) {
+      await tx
+        .update(projects)
+        .set({ mobilizationBilled: false, updatedAt: new Date() })
+        .where(eq(projects.id, projectId));
+    }
+  }
+}
+
 export async function createInvoice(data: InvoiceFormData) {
   const session = await requireSession();
   if (!isRole(session, "super_admin", "admin")) {
@@ -122,6 +170,17 @@ export async function updateInvoice(id: string, data: InvoiceFormData) {
   }
 
   return withRLS(session.userId, session.role, async (tx) => {
+    const [current] = await tx
+      .select({ status: invoices.status, projectId: invoices.projectId })
+      .from(invoices)
+      .where(eq(invoices.id, id));
+    if (!current) throw new Error("Invoice not found");
+    if (current.status === "cancelled") {
+      throw new Error("Cannot edit a cancelled invoice");
+    }
+
+    const targetIsCancelled = data.status === "cancelled";
+
     await tx
       .update(invoices)
       .set({
@@ -162,22 +221,30 @@ export async function updateInvoice(id: string, data: InvoiceFormData) {
       );
     }
 
-    const logIds = data.items
-      .map((i) => i.sourceLogId)
-      .filter((v): v is string => Boolean(v));
-    if (logIds.length > 0) {
-      await tx
-        .update(dailyLogs)
-        .set({ invoiceId: id, updatedAt: new Date() })
-        .where(and(inArray(dailyLogs.id, logIds), isNull(dailyLogs.invoiceId)));
-    }
+    if (targetIsCancelled) {
+      // Cancellation path: skip relink + mobilization-flip; run conditional unflip
+      // based on whether any OTHER non-cancelled invoice on this project still
+      // has a mobilization line. Items above were already re-inserted (with
+      // sourceLogId preserved for historical attribution) but logs stay released.
+      await releaseInvoiceArtifacts(tx, id, current.projectId);
+    } else {
+      const logIds = data.items
+        .map((i) => i.sourceLogId)
+        .filter((v): v is string => Boolean(v));
+      if (logIds.length > 0) {
+        await tx
+          .update(dailyLogs)
+          .set({ invoiceId: id, updatedAt: new Date() })
+          .where(and(inArray(dailyLogs.id, logIds), isNull(dailyLogs.invoiceId)));
+      }
 
-    const hasMobilization = data.items.some((i) => i.unit === "mobilization");
-    if (hasMobilization && data.projectId) {
-      await tx
-        .update(projects)
-        .set({ mobilizationBilled: true, updatedAt: new Date() })
-        .where(and(eq(projects.id, data.projectId), eq(projects.mobilizationBilled, false)));
+      const hasMobilization = data.items.some((i) => i.unit === "mobilization");
+      if (hasMobilization && data.projectId) {
+        await tx
+          .update(projects)
+          .set({ mobilizationBilled: true, updatedAt: new Date() })
+          .where(and(eq(projects.id, data.projectId), eq(projects.mobilizationBilled, false)));
+      }
     }
 
     revalidatePath("/admin/invoices");
@@ -194,10 +261,26 @@ export async function updateInvoiceStatus(
     throw new Error("Forbidden");
   }
   return withRLS(session.userId, session.role, async (tx) => {
+    const [current] = await tx
+      .select({ status: invoices.status, projectId: invoices.projectId })
+      .from(invoices)
+      .where(eq(invoices.id, id));
+    if (!current) throw new Error("Invoice not found");
+
+    const transitioningToCancelled =
+      current.status !== "cancelled" && status === "cancelled";
+
     await tx
       .update(invoices)
       .set({ status: status as never, updatedAt: new Date() })
       .where(eq(invoices.id, id));
+
+    if (transitioningToCancelled) {
+      await releaseInvoiceArtifacts(tx, id, current.projectId);
+    }
+    // Known limitation: transition out of cancelled does not re-link logs;
+    // operator must re-bill via a new invoice. See plan §Known Limitations.
+
     revalidatePath("/admin/invoices");
     revalidatePath(`/admin/invoices/${id}`);
   });
@@ -211,7 +294,7 @@ export async function deleteInvoice(id: string) {
 
   return withRLS(session.userId, session.role, async (tx) => {
     const [inv] = await tx
-      .select({ id: invoices.id, projectId: invoices.projectId })
+      .select({ status: invoices.status, projectId: invoices.projectId })
       .from(invoices)
       .where(eq(invoices.id, id));
     if (!inv) {
@@ -219,43 +302,17 @@ export async function deleteInvoice(id: string) {
       return;
     }
 
-    const mobilizationRows = await tx
-      .select({ id: invoiceItems.id })
-      .from(invoiceItems)
-      .where(and(eq(invoiceItems.invoiceId, id), eq(invoiceItems.unit, "mobilization")));
-    const hadMobilization = mobilizationRows.length > 0;
+    if (inv.status === "cancelled") {
+      revalidatePath("/admin/invoices");
+      return;
+    }
 
     await tx
       .update(invoices)
       .set({ status: "cancelled", updatedAt: new Date() })
       .where(eq(invoices.id, id));
 
-    await tx
-      .update(dailyLogs)
-      .set({ invoiceId: null, updatedAt: new Date() })
-      .where(eq(dailyLogs.invoiceId, id));
-
-    if (hadMobilization && inv.projectId) {
-      const otherMobilization = await tx
-        .select({ id: invoices.id })
-        .from(invoices)
-        .innerJoin(invoiceItems, eq(invoices.id, invoiceItems.invoiceId))
-        .where(
-          and(
-            eq(invoices.projectId, inv.projectId),
-            eq(invoiceItems.unit, "mobilization"),
-            sql`${invoices.status} <> 'cancelled'`,
-            sql`${invoices.id} <> ${id}`
-          )
-        )
-        .limit(1);
-      if (otherMobilization.length === 0) {
-        await tx
-          .update(projects)
-          .set({ mobilizationBilled: false, updatedAt: new Date() })
-          .where(eq(projects.id, inv.projectId));
-      }
-    }
+    await releaseInvoiceArtifacts(tx, id, inv.projectId);
 
     revalidatePath("/admin/invoices");
   });
