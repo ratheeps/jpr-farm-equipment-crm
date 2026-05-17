@@ -3,6 +3,7 @@ import { buildInvoiceLineItems } from "../invoice-line-items";
 
 describe("buildInvoiceLineItems", () => {
   const baseLog = {
+    id: "log-1",
     date: "2026-04-10",
     startEngineHours: "100",
     endEngineHours: "108",
@@ -73,7 +74,7 @@ describe("buildInvoiceLineItems", () => {
   });
 
   it("multiple logs produce multiple line items", () => {
-    const items = buildInvoiceLineItems([], [baseLog, { ...baseLog, date: "2026-04-11" }]);
+    const items = buildInvoiceLineItems([], [baseLog, { ...baseLog, id: "log-2", date: "2026-04-11" }]);
     expect(items).toHaveLength(2);
   });
 
@@ -117,5 +118,35 @@ describe("mobilization double-billing guard (Spec §5.2)", () => {
       && Number(project.mobilizationFee) > 0
       && !project.mobilizationBilled;
     expect(shouldBill).toBeFalsy();
+  });
+});
+
+describe("buildInvoiceLineItems sourceLogId", () => {
+  const baseLog = {
+    id: "log-abc",
+    date: "2026-04-10",
+    startEngineHours: "100",
+    endEngineHours: "108",
+    acresWorked: "5",
+    kmTraveled: "120",
+    vehicleName: "CAT 320",
+    vehicleBillingModel: "hourly" as const,
+    vehicleRatePerHour: "3500",
+    vehicleRatePerAcre: null as string | null,
+    vehicleRatePerKm: null as string | null,
+    vehicleRatePerTask: null as string | null,
+  };
+
+  it("attaches sourceLogId to each log-derived item", () => {
+    const items = buildInvoiceLineItems([], [baseLog, { ...baseLog, id: "log-def" }]);
+    expect(items[0].sourceLogId).toBe("log-abc");
+    expect(items[1].sourceLogId).toBe("log-def");
+  });
+
+  it("preamble items do not carry sourceLogId", () => {
+    const preamble = [{ description: "Mobilization", quantity: "1", unit: "mobilization", rate: "5000", amount: "5000" }];
+    const items = buildInvoiceLineItems(preamble, [baseLog]);
+    expect(items[0].sourceLogId).toBeUndefined();
+    expect(items[1].sourceLogId).toBe("log-abc");
   });
 });
