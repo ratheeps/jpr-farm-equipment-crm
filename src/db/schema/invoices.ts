@@ -12,6 +12,7 @@ import {
 import { relations } from "drizzle-orm";
 import { invoiceStatusEnum } from "./enums";
 import { projects } from "./projects";
+import { dailyLogs } from "./daily-logs";
 
 export const invoices = pgTable("invoices", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -43,6 +44,7 @@ export const invoiceItems = pgTable("invoice_items", {
   rate: numeric("rate", { precision: 10, scale: 2 }).notNull(),
   amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
   sortOrder: integer("sort_order").default(0),
+  sourceLogId: uuid("source_log_id").references(() => dailyLogs.id, { onDelete: "set null" }),
 });
 
 export const quotes = pgTable("quotes", {
@@ -97,6 +99,10 @@ export const invoiceItemsRelations = relations(invoiceItems, ({ one }) => ({
   invoice: one(invoices, {
     fields: [invoiceItems.invoiceId],
     references: [invoices.id],
+  }),
+  sourceLog: one(dailyLogs, {
+    fields: [invoiceItems.sourceLogId],
+    references: [dailyLogs.id],
   }),
 }));
 
