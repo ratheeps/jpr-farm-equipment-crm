@@ -4,7 +4,7 @@ import { withRLS } from "@/db";
 import { projects, dailyLogs, vehicles, invoices, invoiceItems } from "@/db/schema";
 import { requireSession, isRole } from "@/lib/auth/session";
 import { nextInvoiceNumberTx } from "@/lib/actions/invoices";
-import { eq, and, sql, isNull } from "drizzle-orm";
+import { eq, and, sql, isNull, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { buildInvoiceLineItems, type InvoiceLogRow } from "@/lib/invoice-line-items";
 
@@ -30,6 +30,7 @@ export async function generateFromProject(projectId: string) {
     // Fetch completed daily logs with vehicle data
     const logRows = await tx
       .select({
+        id: dailyLogs.id,
         date: dailyLogs.date,
         startEngineHours: dailyLogs.startEngineHours,
         endEngineHours: dailyLogs.endEngineHours,
@@ -47,7 +48,8 @@ export async function generateFromProject(projectId: string) {
       .where(
         and(
           eq(dailyLogs.projectId, projectId),
-          sql`${dailyLogs.endEngineHours} IS NOT NULL`
+          sql`${dailyLogs.endEngineHours} IS NOT NULL`,
+          isNull(dailyLogs.invoiceId)
         )
       )
       .orderBy(dailyLogs.date);
@@ -105,6 +107,7 @@ export async function generateFromProject(projectId: string) {
           rate: item.rate,
           amount: item.amount,
           sortOrder: idx,
+          sourceLogId: item.sourceLogId ?? null,   // preamble (mobilization) is null; log items carry id
         }))
       );
     }
@@ -115,6 +118,14 @@ export async function generateFromProject(projectId: string) {
         .update(projects)
         .set({ mobilizationBilled: true, updatedAt: new Date() })
         .where(eq(projects.id, projectId));
+    }
+
+    const logIds = (logRows as InvoiceLogRow[]).map((l) => l.id);
+    if (logIds.length > 0) {
+      await tx
+        .update(dailyLogs)
+        .set({ invoiceId: invoice.id, updatedAt: new Date() })
+        .where(and(inArray(dailyLogs.id, logIds), isNull(dailyLogs.invoiceId)));
     }
 
     revalidatePath("/admin/invoices");
