@@ -4,7 +4,7 @@ import { withRLS } from "@/db";
 import { projects, dailyLogs, vehicles, invoices, invoiceItems } from "@/db/schema";
 import { requireSession, isRole } from "@/lib/auth/session";
 import { nextInvoiceNumberTx } from "@/lib/actions/invoices";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, sql, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { buildInvoiceLineItems, type InvoiceLogRow } from "@/lib/invoice-line-items";
 
@@ -120,5 +120,101 @@ export async function generateFromProject(projectId: string) {
     revalidatePath("/admin/invoices");
     revalidatePath(`/admin/projects/${projectId}`);
     return invoice.id;
+  });
+}
+
+export type AutoPopulateItem = {
+  description: string;
+  quantity: string;
+  unit: string;
+  rate: string;
+  amount: string;
+  sourceLogId?: string;   // present on log-derived items; absent on preamble (mobilization)
+};
+
+export type AutoPopulateResult = {
+  preamble: AutoPopulateItem[];
+  items: AutoPopulateItem[];
+  clientName: string;
+  clientPhone: string | null;
+};
+
+export async function getUninvoicedLogsForProject(
+  projectId: string
+): Promise<AutoPopulateResult> {
+  const session = await requireSession();
+  if (!isRole(session, "super_admin", "admin")) throw new Error("Forbidden");
+
+  return await withRLS(session.userId, session.role, async (tx) => {
+    const projectRows = await tx
+      .select({
+        clientName: projects.clientName,
+        clientPhone: projects.clientPhone,
+        mobilizationFee: projects.mobilizationFee,
+        mobilizationBilled: projects.mobilizationBilled,
+      })
+      .from(projects)
+      .where(eq(projects.id, projectId));
+    const project = projectRows[0];
+    if (!project) throw new Error("Project not found");
+
+    const logRows = await tx
+      .select({
+        id: dailyLogs.id,
+        date: dailyLogs.date,
+        startEngineHours: dailyLogs.startEngineHours,
+        endEngineHours: dailyLogs.endEngineHours,
+        acresWorked: dailyLogs.acresWorked,
+        kmTraveled: dailyLogs.kmTraveled,
+        vehicleName: vehicles.name,
+        vehicleBillingModel: vehicles.billingModel,
+        vehicleRatePerHour: vehicles.ratePerHour,
+        vehicleRatePerAcre: vehicles.ratePerAcre,
+        vehicleRatePerKm: vehicles.ratePerKm,
+        vehicleRatePerTask: vehicles.ratePerTask,
+      })
+      .from(dailyLogs)
+      .innerJoin(vehicles, eq(dailyLogs.vehicleId, vehicles.id))
+      .where(
+        and(
+          eq(dailyLogs.projectId, projectId),
+          sql`${dailyLogs.endEngineHours} IS NOT NULL`,
+          isNull(dailyLogs.invoiceId)
+        )
+      )
+      .orderBy(dailyLogs.date);
+
+    const preamble: AutoPopulateItem[] = [];
+    const shouldBillMobilization =
+      project.mobilizationFee &&
+      Number(project.mobilizationFee) > 0 &&
+      !project.mobilizationBilled;
+
+    if (shouldBillMobilization) {
+      preamble.push({
+        description: "Mobilization",
+        quantity: "1",
+        unit: "mobilization",
+        rate: project.mobilizationFee!,
+        amount: project.mobilizationFee!,
+      });
+    }
+
+    const built = buildInvoiceLineItems([], logRows as InvoiceLogRow[]);
+    const items: AutoPopulateItem[] = built.map((it) => ({
+      description: it.description,
+      quantity: it.quantity,
+      unit: it.unit,
+      rate: it.rate,
+      amount: it.amount,
+      sourceLogId: it.sourceLogId,
+    }));
+
+    return {
+      preamble,
+      items,
+      clientName: project.clientName,
+      clientPhone: project.clientPhone ?? null,
+    };
   });
 }
