@@ -3,7 +3,7 @@
 import { withRLS, type DB } from "@/db";
 import { invoices, invoiceItems, invoicePayments, projects, dailyLogs } from "@/db/schema";
 import { requireSession, isRole } from "@/lib/auth/session";
-import { eq, desc, count, sum, and, inArray, isNull } from "drizzle-orm";
+import { eq, desc, count, sum, and, inArray, isNull, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 export type InvoiceItemData = {
@@ -140,6 +140,11 @@ export async function updateInvoice(id: string, data: InvoiceFormData) {
       })
       .where(eq(invoices.id, id));
 
+    await tx
+      .update(dailyLogs)
+      .set({ invoiceId: null, updatedAt: new Date() })
+      .where(eq(dailyLogs.invoiceId, id));
+
     await tx.delete(invoiceItems).where(eq(invoiceItems.invoiceId, id));
 
     if (data.items.length > 0) {
@@ -152,8 +157,27 @@ export async function updateInvoice(id: string, data: InvoiceFormData) {
           rate: item.rate,
           amount: item.amount,
           sortOrder: idx,
+          sourceLogId: item.sourceLogId || null,
         }))
       );
+    }
+
+    const logIds = data.items
+      .map((i) => i.sourceLogId)
+      .filter((v): v is string => Boolean(v));
+    if (logIds.length > 0) {
+      await tx
+        .update(dailyLogs)
+        .set({ invoiceId: id, updatedAt: new Date() })
+        .where(and(inArray(dailyLogs.id, logIds), isNull(dailyLogs.invoiceId)));
+    }
+
+    const hasMobilization = data.items.some((i) => i.unit === "mobilization");
+    if (hasMobilization && data.projectId) {
+      await tx
+        .update(projects)
+        .set({ mobilizationBilled: true, updatedAt: new Date() })
+        .where(and(eq(projects.id, data.projectId), eq(projects.mobilizationBilled, false)));
     }
 
     revalidatePath("/admin/invoices");
@@ -186,10 +210,52 @@ export async function deleteInvoice(id: string) {
   }
 
   return withRLS(session.userId, session.role, async (tx) => {
+    const [inv] = await tx
+      .select({ id: invoices.id, projectId: invoices.projectId })
+      .from(invoices)
+      .where(eq(invoices.id, id));
+    if (!inv) {
+      revalidatePath("/admin/invoices");
+      return;
+    }
+
+    const mobilizationRows = await tx
+      .select({ id: invoiceItems.id })
+      .from(invoiceItems)
+      .where(and(eq(invoiceItems.invoiceId, id), eq(invoiceItems.unit, "mobilization")));
+    const hadMobilization = mobilizationRows.length > 0;
+
     await tx
       .update(invoices)
       .set({ status: "cancelled", updatedAt: new Date() })
       .where(eq(invoices.id, id));
+
+    await tx
+      .update(dailyLogs)
+      .set({ invoiceId: null, updatedAt: new Date() })
+      .where(eq(dailyLogs.invoiceId, id));
+
+    if (hadMobilization && inv.projectId) {
+      const otherMobilization = await tx
+        .select({ id: invoices.id })
+        .from(invoices)
+        .innerJoin(invoiceItems, eq(invoices.id, invoiceItems.invoiceId))
+        .where(
+          and(
+            eq(invoices.projectId, inv.projectId),
+            eq(invoiceItems.unit, "mobilization"),
+            sql`${invoices.status} <> 'cancelled'`,
+            sql`${invoices.id} <> ${id}`
+          )
+        )
+        .limit(1);
+      if (otherMobilization.length === 0) {
+        await tx
+          .update(projects)
+          .set({ mobilizationBilled: false, updatedAt: new Date() })
+          .where(eq(projects.id, inv.projectId));
+      }
+    }
 
     revalidatePath("/admin/invoices");
   });
@@ -287,7 +353,17 @@ export async function getInvoice(id: string) {
 
     const [items, payments] = await Promise.all([
       tx
-        .select()
+        .select({
+          id: invoiceItems.id,
+          invoiceId: invoiceItems.invoiceId,
+          description: invoiceItems.description,
+          quantity: invoiceItems.quantity,
+          unit: invoiceItems.unit,
+          rate: invoiceItems.rate,
+          amount: invoiceItems.amount,
+          sortOrder: invoiceItems.sortOrder,
+          sourceLogId: invoiceItems.sourceLogId,
+        })
         .from(invoiceItems)
         .where(eq(invoiceItems.invoiceId, id))
         .orderBy(invoiceItems.sortOrder),

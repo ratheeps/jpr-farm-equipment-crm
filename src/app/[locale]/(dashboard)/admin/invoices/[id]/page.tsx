@@ -110,6 +110,7 @@ export default async function EditInvoicePage({
               rate: item.rate,
               amount: item.amount,
               sortOrder: item.sortOrder,
+              sourceLogId: item.sourceLogId,
             })),
           }}
         />
