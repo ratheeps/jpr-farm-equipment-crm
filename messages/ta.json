@@ -143,7 +143,8 @@
       "super_admin": "உயர் நிர்வாகி",
       "admin": "நிர்வாகி",
       "operator": "இயக்குனர்",
-      "auditor": "தணிக்கையாளர்"
+      "auditor": "தணிக்கையாளர்",
+      "finance": "நிதி"
     },
     "payTypes": {
       "hourly": "மணி நேரம்",

@@ -32,7 +32,7 @@ export type StaffActionResult =
   | { ok: true }
   | { ok: false; fieldErrors?: Record<string, string>; formError?: string };
 
-const USER_ROLES = ["super_admin", "admin", "operator", "auditor"] as const;
+const USER_ROLES = ["super_admin", "admin", "operator", "auditor", "finance"] as const;
 const PAY_TYPES = ["hourly", "daily", "monthly", "per_acre"] as const;
 const LOCALES = ["ta", "si", "en"] as const;
 

@@ -11,11 +11,15 @@ describe("<Stepper>", () => {
 
   it("increments and decrements within bounds", async () => {
     const onChange = vi.fn();
-    render(<Stepper value={2} onChange={onChange} step={0.5} min={0} max={3} />);
+    const { rerender } = render(
+      <Stepper value={2} onChange={onChange} step={0.5} min={0} max={3} />
+    );
 
     await userEvent.click(screen.getByRole("button", { name: "Increase" }));
     expect(onChange).toHaveBeenLastCalledWith(2.5);
 
+    // Re-anchor at value=2 to verify the decrement path independently.
+    rerender(<Stepper value={2} onChange={onChange} step={0.5} min={0} max={3} />);
     await userEvent.click(screen.getByRole("button", { name: "Decrease" }));
     expect(onChange).toHaveBeenLastCalledWith(1.5);
   });

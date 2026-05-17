@@ -143,7 +143,8 @@
       "super_admin": "ප්‍රධාන පරිපාලක",
       "admin": "පරිපාලක",
       "operator": "ක්‍රියාකරු",
-      "auditor": "විගණකයා"
+      "auditor": "විගණකයා",
+      "finance": "මුදල්"
     },
     "payTypes": {
       "hourly": "පැය",

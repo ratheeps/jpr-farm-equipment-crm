@@ -36,6 +36,7 @@ export function Stepper({
     (delta: 1 | -1) => {
       const next = clamp(round(valueRef.current + delta * step), min, max);
       if (next !== valueRef.current) {
+        valueRef.current = next;
         onChange(next);
         return true;
       }
