@@ -9,6 +9,7 @@
     "loading": "පූරණය වෙමින්...",
     "confirm": "තහවුරු කරන්න",
     "search": "සොයන්න",
+    "clearSearch": "සෙවුම ඉවත් කරන්න",
     "filter": "පෙරහන",
     "noData": "දත්ත නොමැත",
     "error": "දෝෂයක් සිදු විය",
@@ -680,5 +681,30 @@
     "syncStatus": "සමමුහුර්ත තත්ත්වය",
     "applyFilters": "යොදන්න",
     "resetFilters": "නැවත සකසන්න"
+  },
+  "forms": {
+    "next": "ඊළඟ",
+    "stepProgress": "පියවර {current} / {total}",
+    "couldNotLoad": "පූරණය කළ නොහැක",
+    "errorRetryHint": "නැවත උත්සාහ කරන්න හෝ නොබැඳිව සුරකින්න.",
+    "tryAgain": "නැවත උත්සාහ කරන්න",
+    "addPhoto": "ඡායාරූපය එක් කරන්න",
+    "continueFromYesterday": "ඊයේ සිට ඉදිරියට යනවාද?",
+    "yesContinue": "ඔව්, ඉදිරියට යන්න",
+    "change": "වෙනස් කරන්න",
+    "close": "වසන්න"
+  },
+  "offlineBanner": {
+    "syncingPending": "සමමුහූර්තය · {count} පොරොත්තුවෙන්",
+    "offlineUnsynced": "{base} · {count} සමමුහූර්ත නොකළ"
+  },
+  "installPrompt": {
+    "title": "JPR Farm ස්ථාපනය කරන්න",
+    "descriptionDefault": "නොබැඳිව ක්‍රියා කරයි. බ්‍රවුසරයේ ටැබයකට වඩා වේගවත්.",
+    "iosHint": "Share අයිකනය ස්පර්ශ කර, මුල් තිරයට එක් කරන්න තෝරන්න.",
+    "iosSteps": "Share → මුල් තිරයට එක් කරන්න",
+    "later": "පසුව",
+    "install": "ස්ථාපනය කරන්න",
+    "gotIt": "තේරුණා"
   }
 }

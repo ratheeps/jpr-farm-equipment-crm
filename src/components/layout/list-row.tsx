@@ -88,7 +88,7 @@ export function ListRow({
           type="button"
           aria-label={inlineAction.label}
           onClick={inlineAction.onClick}
-          className="my-2 mr-2 flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground"
+          className="my-2 mr-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground"
         >
           <inlineAction.icon className="h-4 w-4" strokeWidth={2.25} />
         </button>

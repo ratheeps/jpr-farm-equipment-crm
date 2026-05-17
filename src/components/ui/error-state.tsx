@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -12,12 +13,13 @@ interface ErrorStateProps {
 }
 
 export function ErrorState({
-  title = "Could not load",
-  description = "Try again or save offline.",
+  title,
+  description,
   onRetry,
-  retryLabel = "Try again",
+  retryLabel,
   className,
 }: ErrorStateProps) {
+  const t = useTranslations("forms");
   return (
     <div
       className={cn(
@@ -30,15 +32,19 @@ export function ErrorState({
         strokeWidth={1.5}
         aria-hidden="true"
       />
-      <p className="mt-4 text-base font-semibold text-foreground">{title}</p>
-      <p className="mt-1 text-sm text-muted-foreground max-w-xs">{description}</p>
+      <p className="mt-4 text-base font-semibold text-foreground">
+        {title ?? t("couldNotLoad")}
+      </p>
+      <p className="mt-1 text-sm text-muted-foreground max-w-xs">
+        {description ?? t("errorRetryHint")}
+      </p>
       {onRetry && (
         <button
           type="button"
           onClick={onRetry}
           className="mt-5 inline-flex items-center justify-center h-11 px-6 rounded-lg bg-primary text-primary-foreground text-sm font-semibold shadow-card"
         >
-          {retryLabel}
+          {retryLabel ?? t("tryAgain")}
         </button>
       )}
     </div>

@@ -5,6 +5,10 @@ import { OfflineBanner } from "../offline-banner";
 
 const messages = {
   operator: { offlineBanner: "Working offline" },
+  offlineBanner: {
+    syncingPending: "Syncing · {count} pending",
+    offlineUnsynced: "{base} · {count} unsynced",
+  },
 };
 
 function renderBanner(getPending: () => Promise<number>) {

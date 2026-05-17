@@ -1,40 +1,72 @@
 "use client";
 
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import { Camera } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+const DEFAULT_MAX_BYTES = 8 * 1024 * 1024; // 8 MB — fits sync payloads + IndexedDB quotas comfortably
 
 interface PhotoFieldProps {
   value?: File | null;
   onChange: (file: File | null) => void;
+  onError?: (reason: "size" | "type", file: File) => void;
   label?: string;
+  maxBytes?: number;
+  accept?: string;
   className?: string;
 }
 
 export function PhotoField({
   value,
   onChange,
-  label = "Add photo",
+  onError,
+  label,
+  maxBytes = DEFAULT_MAX_BYTES,
+  accept = "image/*",
   className,
 }: PhotoFieldProps) {
+  const t = useTranslations("forms");
   const inputRef = React.useRef<HTMLInputElement>(null);
-  const previewUrl = React.useMemo(() => (value ? URL.createObjectURL(value) : null), [value]);
+  const [previewUrl, setPreviewUrl] = React.useState<string | null>(null);
 
   React.useEffect(() => {
-    return () => {
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
-    };
-  }, [previewUrl]);
+    if (!value) {
+      setPreviewUrl(null);
+      return;
+    }
+    const url = URL.createObjectURL(value);
+    setPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [value]);
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) {
+      onChange(null);
+      return;
+    }
+    if (!file.type.startsWith("image/")) {
+      onError?.("type", file);
+      return;
+    }
+    if (file.size > maxBytes) {
+      onError?.("size", file);
+      return;
+    }
+    onChange(file);
+  }
 
   return (
     <div className={cn("relative", className)}>
       <input
         ref={inputRef}
         type="file"
-        accept="image/*"
+        accept={accept}
         capture="environment"
         className="sr-only"
-        onChange={(e) => onChange(e.target.files?.[0] ?? null)}
+        onChange={handleFileChange}
       />
       <button
         type="button"
@@ -47,7 +79,7 @@ export function PhotoField({
         ) : (
           <>
             <Camera className="h-7 w-7" strokeWidth={1.5} />
-            <span className="text-sm font-semibold">{label}</span>
+            <span className="text-sm font-semibold">{label ?? t("addPhoto")}</span>
           </>
         )}
       </button>

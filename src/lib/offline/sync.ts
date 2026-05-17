@@ -3,6 +3,7 @@
  * when network is restored. Call syncAll() on the `online` window event.
  */
 import { localDb } from "./db";
+import { SYNC_SUCCESS_KEY } from "@/lib/install-prompt-storage";
 
 async function syncLogs(): Promise<number> {
   const pending = await localDb.offlineLogs
@@ -73,13 +74,11 @@ async function syncExpenses(): Promise<number> {
 export async function syncAll(): Promise<void> {
   try {
     const [logs, expenses] = await Promise.all([syncLogs(), syncExpenses()]);
-    // Mirror SYNC_SUCCESS_KEY from install-prompt.tsx without importing
-    // (sync.ts is imported by offline-banner; back-import would cycle).
-    // Only flip the flag when at least one record actually transitioned
-    // local -> synced; an online event with no pending records or with
-    // server errors should not gate the install prompt.
+    // Only flip when at least one record actually transitioned local -> synced;
+    // an online event with no pending records or with server errors should not
+    // gate the install prompt.
     if (typeof window !== "undefined" && logs + expenses > 0) {
-      window.localStorage.setItem("install-prompt:syncSucceeded", "1");
+      window.localStorage.setItem(SYNC_SUCCESS_KEY, "1");
     }
   } finally {
     if (typeof window !== "undefined") {

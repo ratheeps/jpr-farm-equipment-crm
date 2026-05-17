@@ -17,6 +17,7 @@ export function OfflineBanner({
   getPendingCount = pendingSyncCount,
 }: OfflineBannerProps = {}) {
   const t = useTranslations("operator");
+  const tBanner = useTranslations("offlineBanner");
   const [isOnline, setIsOnline] = useState(true);
   const [pending, setPending] = useState(0);
 
@@ -66,9 +67,9 @@ export function OfflineBanner({
 
   const offlineCopy = t("offlineBanner");
   const message = isOnline
-    ? `Syncing · ${pending} pending`
+    ? tBanner("syncingPending", { count: pending })
     : pending > 0
-    ? `${offlineCopy} · ${pending} unsynced`
+    ? tBanner("offlineUnsynced", { base: offlineCopy, count: pending })
     : offlineCopy;
 
   return (

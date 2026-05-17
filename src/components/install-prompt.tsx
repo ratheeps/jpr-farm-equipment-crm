@@ -1,12 +1,13 @@
 "use client";
 
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import { Drawer } from "vaul";
 import { Smartphone, Share, X } from "lucide-react";
 
 const DISMISSED_KEY = "install-prompt:dismissedAt";
 const SESSION_COUNT_KEY = "install-prompt:sessionCount";
-const SYNC_SUCCESS_KEY = "install-prompt:syncSucceeded";
+import { SYNC_SUCCESS_KEY } from "@/lib/install-prompt-storage";
 const COOLDOWN_MS = 7 * 24 * 3600 * 1000;
 
 // Trigger gates per spec §8: prompt only after the second session OR
@@ -27,7 +28,6 @@ export function recordSyncSuccess(): void {
 
 export function canPromptInstall(): boolean {
   if (typeof window === "undefined") return false;
-  // Cooldown beats every other condition.
   const dismissed = window.localStorage.getItem(DISMISSED_KEY);
   if (dismissed) {
     const ts = Number(dismissed);
@@ -43,13 +43,40 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 }
 
+// iPadOS 13+ reports `MacIntel` in UA but exposes >1 touch points — the regex
+// alone misses these devices. Treat any Mac-shaped UA with touch as iOS.
+function isIOSDevice(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent;
+  const directMatch = /iPad|iPhone|iPod/.test(ua);
+  const macWithTouch =
+    /Macintosh|MacIntel/.test(ua) && navigator.maxTouchPoints > 1;
+  const isWebViewBrowser = /CriOS|FxiOS|EdgiOS/.test(ua);
+  return (directMatch || macWithTouch) && !isWebViewBrowser;
+}
+
+function isStandalonePWA(): boolean {
+  if (typeof window === "undefined") return false;
+  if (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) {
+    return true;
+  }
+  return (
+    "standalone" in navigator &&
+    (navigator as Navigator & { standalone?: boolean }).standalone === true
+  );
+}
+
 export function InstallPrompt() {
+  const t = useTranslations("installPrompt");
+  const tCommon = useTranslations("common");
+  const tForms = useTranslations("forms");
   const [open, setOpen] = React.useState(false);
   const [event, setEvent] = React.useState<BeforeInstallPromptEvent | null>(null);
   const [iosFallback, setIosFallback] = React.useState(false);
 
   React.useEffect(() => {
     if (!canPromptInstall()) return;
+    if (isStandalonePWA()) return;
 
     function onBeforeInstall(e: Event) {
       e.preventDefault();
@@ -57,16 +84,7 @@ export function InstallPrompt() {
       setOpen(true);
     }
 
-    const isIOSStandalone =
-      typeof window !== "undefined" &&
-      window.matchMedia &&
-      window.matchMedia("(display-mode: standalone)").matches;
-    const isIOSSafari =
-      typeof navigator !== "undefined" &&
-      /iPad|iPhone|iPod/.test(navigator.userAgent) &&
-      !/CriOS|FxiOS|EdgiOS/.test(navigator.userAgent);
-
-    if (isIOSSafari && !isIOSStandalone) {
+    if (isIOSDevice()) {
       setIosFallback(true);
       setOpen(true);
     } else {
@@ -100,18 +118,16 @@ export function InstallPrompt() {
             </div>
             <div className="flex-1">
               <Drawer.Title className="text-base font-semibold">
-                Install JPR Farm
+                {t("title")}
               </Drawer.Title>
               <Drawer.Description className="mt-1 text-sm text-muted-foreground">
-                {iosFallback
-                  ? "Tap the Share icon, then choose Add to Home Screen."
-                  : "Works offline. Faster to open than a browser tab."}
+                {iosFallback ? t("iosHint") : t("descriptionDefault")}
               </Drawer.Description>
             </div>
             <button
               type="button"
               onClick={dismiss}
-              aria-label="Close"
+              aria-label={tForms("close")}
               className="rounded-md p-1 text-muted-foreground"
             >
               <X className="h-5 w-5" />
@@ -121,14 +137,14 @@ export function InstallPrompt() {
             <div className="mt-4 px-4">
               <div className="rounded-lg bg-secondary px-3 py-3 text-sm">
                 <Share className="mr-2 inline h-4 w-4 text-foreground" />
-                Share → Add to Home Screen
+                {t("iosSteps")}
               </div>
               <button
                 type="button"
                 onClick={dismiss}
                 className="mt-3 h-12 w-full rounded-lg bg-secondary text-sm font-semibold"
               >
-                Got it
+                {t("gotIt")}
               </button>
             </div>
           ) : (
@@ -138,14 +154,14 @@ export function InstallPrompt() {
                 onClick={dismiss}
                 className="h-12 rounded-lg bg-secondary text-sm font-semibold"
               >
-                Later
+                {t("later")}
               </button>
               <button
                 type="button"
                 onClick={install}
                 className="h-12 rounded-lg bg-primary text-primary-foreground text-sm font-semibold"
               >
-                Install
+                {t("install")}
               </button>
             </div>
           )}

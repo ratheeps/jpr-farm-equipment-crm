@@ -9,6 +9,7 @@
     "loading": "Loading...",
     "confirm": "Confirm",
     "search": "Search",
+    "clearSearch": "Clear search",
     "filter": "Filter",
     "noData": "No data found",
     "error": "An error occurred",
@@ -680,5 +681,30 @@
     "syncStatus": "Sync Status",
     "applyFilters": "Apply",
     "resetFilters": "Reset"
+  },
+  "forms": {
+    "next": "Next",
+    "stepProgress": "Step {current} of {total}",
+    "couldNotLoad": "Could not load",
+    "errorRetryHint": "Try again or save offline.",
+    "tryAgain": "Try again",
+    "addPhoto": "Add photo",
+    "continueFromYesterday": "Continue from yesterday?",
+    "yesContinue": "Yes, continue",
+    "change": "Change",
+    "close": "Close"
+  },
+  "offlineBanner": {
+    "syncingPending": "Syncing · {count} pending",
+    "offlineUnsynced": "{base} · {count} unsynced"
+  },
+  "installPrompt": {
+    "title": "Install JPR Farm",
+    "descriptionDefault": "Works offline. Faster to open than a browser tab.",
+    "iosHint": "Tap the Share icon, then choose Add to Home Screen.",
+    "iosSteps": "Share → Add to Home Screen",
+    "later": "Later",
+    "install": "Install",
+    "gotIt": "Got it"
   }
 }

@@ -9,6 +9,7 @@
     "loading": "ஏற்றுகிறது...",
     "confirm": "உறுதிப்படுத்து",
     "search": "தேடு",
+    "clearSearch": "தேடலை அழி",
     "filter": "வடிகட்டு",
     "noData": "தரவு இல்லை",
     "error": "பிழை ஏற்பட்டது",
@@ -680,5 +681,30 @@
     "syncStatus": "ஒத்திசைவு நிலை",
     "applyFilters": "பொருத்து",
     "resetFilters": "மீட்டமை"
+  },
+  "forms": {
+    "next": "அடுத்து",
+    "stepProgress": "படி {current} / {total}",
+    "couldNotLoad": "ஏற்ற முடியவில்லை",
+    "errorRetryHint": "மீண்டும் முயற்சிக்கவும் அல்லது ஆஃப்லைனில் சேமிக்கவும்.",
+    "tryAgain": "மீண்டும் முயற்சி",
+    "addPhoto": "புகைப்படம் சேர்",
+    "continueFromYesterday": "நேற்றிலிருந்து தொடரவா?",
+    "yesContinue": "ஆம், தொடரு",
+    "change": "மாற்று",
+    "close": "மூடு"
+  },
+  "offlineBanner": {
+    "syncingPending": "ஒத்திசைகிறது · {count} நிலுவை",
+    "offlineUnsynced": "{base} · {count} ஒத்திசைக்காதவை"
+  },
+  "installPrompt": {
+    "title": "JPR Farm நிறுவ",
+    "descriptionDefault": "ஆஃப்லைனில் வேலை செய்யும். உலாவித் தாவலை விட வேகமாக.",
+    "iosHint": "Share ஐகானைத் தட்டி, Add to Home Screen-ஐ தேர்ந்தெடுக்கவும்.",
+    "iosSteps": "Share → Add to Home Screen",
+    "later": "பிறகு",
+    "install": "நிறுவு",
+    "gotIt": "புரிந்தது"
   }
 }

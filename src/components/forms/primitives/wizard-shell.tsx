@@ -1,12 +1,14 @@
 "use client";
 
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 
 interface WizardShellProps {
   children: React.ReactNode;
   initialStep?: number;
-  onSubmit: () => void;
+  onSubmit: () => void | Promise<void>;
+  onSubmitError?: (error: unknown) => void;
   isSubmitting?: boolean;
   submitLabel?: string;
   nextLabel?: string;
@@ -19,18 +21,33 @@ export function WizardShell({
   children,
   initialStep = 0,
   onSubmit,
+  onSubmitError,
   isSubmitting,
-  submitLabel = "Save",
-  nextLabel = "Next",
-  backLabel = "Back",
+  submitLabel,
+  nextLabel,
+  backLabel,
   canAdvance,
   className,
 }: WizardShellProps) {
+  const tCommon = useTranslations("common");
+  const tForms = useTranslations("forms");
   const steps = React.Children.toArray(children);
   const total = steps.length;
   const [step, setStep] = React.useState(Math.max(0, Math.min(initialStep, total - 1)));
   const isLast = step === total - 1;
   const blocked = canAdvance ? !canAdvance(step) : false;
+
+  async function handleSubmit() {
+    try {
+      await onSubmit();
+    } catch (error) {
+      if (onSubmitError) {
+        onSubmitError(error);
+      } else {
+        throw error;
+      }
+    }
+  }
 
   return (
     <div className={cn("flex flex-col gap-4", className)}>
@@ -46,7 +63,7 @@ export function WizardShell({
         ))}
       </div>
       <p className="text-xs text-muted-foreground">
-        Step {step + 1} of {total}
+        {tForms("stepProgress", { current: step + 1, total })}
       </p>
       <div>{steps[step]}</div>
       <div className="grid grid-cols-3 gap-2 pt-2">
@@ -56,16 +73,16 @@ export function WizardShell({
           disabled={step === 0 || isSubmitting}
           className="col-span-1 h-12 rounded-lg bg-secondary text-foreground text-sm font-semibold disabled:opacity-40"
         >
-          {backLabel}
+          {backLabel ?? tCommon("back")}
         </button>
         {isLast ? (
           <button
             type="button"
-            onClick={onSubmit}
+            onClick={handleSubmit}
             disabled={blocked || isSubmitting}
             className="col-span-2 h-12 rounded-lg bg-primary text-primary-foreground text-sm font-semibold disabled:opacity-60"
           >
-            {submitLabel}
+            {submitLabel ?? tCommon("save")}
           </button>
         ) : (
           <button
@@ -74,7 +91,7 @@ export function WizardShell({
             disabled={blocked}
             className="col-span-2 h-12 rounded-lg bg-primary text-primary-foreground text-sm font-semibold disabled:opacity-60"
           >
-            {nextLabel}
+            {nextLabel ?? tForms("next")}
           </button>
         )}
       </div>

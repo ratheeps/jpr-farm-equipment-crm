@@ -11,30 +11,35 @@ export interface TileOption<T> {
   icon: LucideIcon;
 }
 
-interface TilePickerProps<T> {
-  value: T | T[];
-  onChange: (value: T | T[]) => void;
-  options: TileOption<T>[];
-  multi?: boolean;
-  className?: string;
-}
+type TilePickerProps<T> =
+  | {
+      multi: true;
+      value: T[];
+      onChange: (value: T[]) => void;
+      options: TileOption<T>[];
+      className?: string;
+    }
+  | {
+      multi?: false;
+      value: T;
+      onChange: (value: T) => void;
+      options: TileOption<T>[];
+      className?: string;
+    };
 
-export function TilePicker<T extends string | number>({
-  value,
-  onChange,
-  options,
-  multi = false,
-  className,
-}: TilePickerProps<T>) {
+export function TilePicker<T extends string | number>(
+  props: TilePickerProps<T>
+) {
+  const { options, className } = props;
   const isSelected = (v: T) =>
-    Array.isArray(value) ? value.includes(v) : value === v;
+    props.multi ? props.value.includes(v) : props.value === v;
 
   function toggle(v: T) {
-    if (multi) {
-      const arr = Array.isArray(value) ? value : [];
-      onChange(arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
+    if (props.multi) {
+      const arr = props.value;
+      props.onChange(arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
     } else {
-      onChange(v);
+      props.onChange(v);
     }
   }
 
