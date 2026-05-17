@@ -1,9 +1,9 @@
 "use server";
 
 import { withRLS, type DB } from "@/db";
-import { invoices, invoiceItems, invoicePayments, projects } from "@/db/schema";
+import { invoices, invoiceItems, invoicePayments, projects, dailyLogs } from "@/db/schema";
 import { requireSession, isRole } from "@/lib/auth/session";
-import { eq, desc, count, sum } from "drizzle-orm";
+import { eq, desc, count, sum, and, inArray, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 export type InvoiceItemData = {
@@ -13,6 +13,7 @@ export type InvoiceItemData = {
   rate: string;
   amount: string;
   sortOrder?: number;
+  sourceLogId?: string;
 };
 
 export type InvoiceFormData = {
@@ -86,8 +87,27 @@ export async function createInvoice(data: InvoiceFormData) {
           rate: item.rate,
           amount: item.amount,
           sortOrder: idx,
+          sourceLogId: item.sourceLogId || null,
         }))
       );
+    }
+
+    const logIds = data.items
+      .map((i) => i.sourceLogId)
+      .filter((v): v is string => Boolean(v));
+    if (logIds.length > 0) {
+      await tx
+        .update(dailyLogs)
+        .set({ invoiceId: invoice.id, updatedAt: new Date() })
+        .where(and(inArray(dailyLogs.id, logIds), isNull(dailyLogs.invoiceId)));
+    }
+
+    const hasMobilization = data.items.some((i) => i.unit === "mobilization");
+    if (hasMobilization && data.projectId) {
+      await tx
+        .update(projects)
+        .set({ mobilizationBilled: true, updatedAt: new Date() })
+        .where(and(eq(projects.id, data.projectId), eq(projects.mobilizationBilled, false)));
     }
 
     revalidatePath("/admin/invoices");
