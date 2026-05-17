@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { locales, type Locale } from "@/i18n/config";
 import { fontForLocale, htmlClassForLocale } from "@/lib/fonts";
 import { NavigationProgress } from "@/components/layout/navigation-progress";
+import { SwDevUnregister } from "@/components/dev/sw-dev-unregister";
 import "@/app/globals.css";
 
 export const metadata: Metadata = {
@@ -64,6 +65,7 @@ export default async function LocaleLayout({
       </head>
       <body>
         <NavigationProgress />
+        <SwDevUnregister />
         <NextIntlClientProvider messages={messages}>
           {children}
         </NextIntlClientProvider>

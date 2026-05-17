@@ -6,6 +6,8 @@
 
 **Architecture:** Add a nullable `invoice_id` FK to `daily_logs` to track invoice attribution. A new read-only server action returns uninvoiced log items + preamble for the form. Each form row carries an optional `sourceLogId` so create/update/delete actions can link/release the underlying logs atomically. The existing `generateFromProject` (project page button) gets aligned with the same model to fix latent double-billing.
 
+**Spec deviation:** Spec only added `daily_logs.invoice_id`. Implementation also adds `invoice_items.source_log_id` (nullable FK to `daily_logs`). Reason: without it, editing an existing invoice silently unlinks every previously-linked log — `updateInvoice` releases all linked logs then can't re-link because the form has no way to recover sourceLogId from `invoice_items`. The new column round-trips through `getInvoice` → form `initial.items` → submit payload → `updateInvoice` relink. Kept in sync with `daily_logs.invoice_id` on every insert. Both columns remain (one is fast filter, the other is per-item provenance).
+
 **Tech Stack:** Next.js App Router + Server Actions, Drizzle ORM, PostgreSQL, vitest, next-intl, Tailwind.
 
 **Spec:** [docs/superpowers/specs/2026-05-17-invoice-auto-populate-design.md](../specs/2026-05-17-invoice-auto-populate-design.md)
@@ -15,19 +17,23 @@
 ## File Map
 
 **Modify:**
-- `src/db/schema/daily-logs.ts` — add `invoiceId` FK column + composite index
+- `src/db/schema/daily-logs.ts` — add `invoiceId` FK column + invoice relation
+- `src/db/schema/invoices.ts` — add `invoiceItems.sourceLogId` FK column + relation
 - `src/lib/invoice-line-items.ts` — extend `InvoiceLogRow` with `id`, return `sourceLogId` on log items, add `LineItem.sourceLogId`
-- `src/lib/actions/invoice-generation.ts` — add `getUninvoicedLogsForProject`; update `generateFromProject` (filter + link)
-- `src/lib/actions/invoices.ts` — extend `InvoiceItemData.sourceLogId`; link/release logs in `createInvoice`, `updateInvoice`, `deleteInvoice`; mobilization flag handling
-- `src/components/forms/invoice-form.tsx` — touched-state + `onProjectChange` + badge
-- `messages/en.json`, `messages/ta.json`, `messages/si.json` — `invoices.fromLog`, `invoices.noUninvoicedLogs`
+- `src/lib/actions/invoice-generation.ts` — add `getUninvoicedLogsForProject`; update `generateFromProject` (filter + link + write source_log_id)
+- `src/lib/actions/invoices.ts` — extend `InvoiceItemData.sourceLogId`; write `source_log_id` on insert; link/release logs in `createInvoice`, `updateInvoice`, `deleteInvoice`; surface `sourceLogId` in `getInvoice`; mobilization flag handling
+- `src/components/forms/invoice-form.tsx` — touched-state + `onProjectChange` + badge + carry `sourceLogId` through `initial.items` and submit
+- `messages/en.json`, `messages/ta.json`, `messages/si.json` — `invoices.fromLog`, `invoices.noUninvoicedLogs`, `invoices.units.mobilization`
 
-**Migrations:**
-- `drizzle/<timestamp>_add_daily_logs_invoice_id.sql` (generated)
+**Migrations** (location per [drizzle.config.ts:17](../../../drizzle.config.ts#L17) is `./src/db/migrations`; existing top file is `0013_rls_function_volatility.sql`):
+- `src/db/migrations/0014_invoice_log_attribution.sql` (generated; one migration covers both columns)
 
 **Tests (modify/add):**
 - `src/lib/__tests__/invoice-generation.test.ts` — new cases for `sourceLogId` on items
-- `src/lib/__tests__/invoice-line-items-source-log.test.ts` — new file (if separation cleaner) OR append
+
+**Known limitations to document in PR description:**
+- Logs already billed by historical invoices stay `invoice_id = NULL` (not backfilled). Future re-runs of auto-populate could re-include them; admin reviews before save (spec §Out of Scope).
+- Un-cancelling a previously-cancelled invoice via `updateInvoiceStatus` does NOT re-link the released logs. Re-linking would require re-running auto-populate.
 
 ---
 
@@ -80,17 +86,26 @@ Expected: FAIL — `id` not in type, or `sourceLogId` undefined for log items.
 
 - [ ] **Step 3: Update existing test fixtures to include `id`**
 
-In the same file, update the `baseLog` constant in the first `describe("buildInvoiceLineItems", ...)` block to include `id: "log-1"`:
+In the same file, replace the `baseLog` constant in the first `describe("buildInvoiceLineItems", ...)` block with:
 
 ```ts
 const baseLog = {
   id: "log-1",
   date: "2026-04-10",
-  // ...rest unchanged
+  startEngineHours: "100",
+  endEngineHours: "108",
+  acresWorked: "5",
+  kmTraveled: "120",
+  vehicleName: "CAT 320",
+  vehicleBillingModel: "hourly" as const,
+  vehicleRatePerHour: "3500",
+  vehicleRatePerAcre: null as string | null,
+  vehicleRatePerKm: null as string | null,
+  vehicleRatePerTask: null as string | null,
 };
 ```
 
-Update the `"multiple logs"` test to pass distinct ids:
+Update the `"multiple logs"` test to pass distinct ids (otherwise both rows carry `sourceLogId: "log-1"` which is logically incorrect even if the count assertion still passes):
 
 ```ts
 it("multiple logs produce multiple line items", () => {
@@ -179,13 +194,14 @@ git commit -m "feat(invoices): carry sourceLogId on auto-built line items"
 
 ---
 
-## Task 2: Add `invoice_id` FK column to `daily_logs`
+## Task 2: Add `invoice_id` FK on `daily_logs` + `source_log_id` FK on `invoice_items`
 
 **Files:**
 - Modify: `src/db/schema/daily-logs.ts`
-- Generate: `drizzle/<timestamp>_<name>.sql`
+- Modify: `src/db/schema/invoices.ts`
+- Generate: `src/db/migrations/0014_invoice_log_attribution.sql` (drizzle auto-numbers next sequential; if it picks a different number, use that)
 
-- [ ] **Step 1: Add column to schema**
+- [ ] **Step 1: Add `invoiceId` column to `daily_logs` schema**
 
 In `src/db/schema/daily-logs.ts`:
 
@@ -224,37 +240,81 @@ export const dailyLogsRelations = relations(dailyLogs, ({ one }) => ({
 }));
 ```
 
-- [ ] **Step 2: Generate migration**
+- [ ] **Step 2: Add `sourceLogId` column to `invoice_items` schema**
+
+In `src/db/schema/invoices.ts`:
+
+Add import at top of file (alongside existing imports):
+
+```ts
+import { dailyLogs } from "./daily-logs";
+```
+
+Inside `invoiceItems` table definition, after the existing `sortOrder` column, add:
+
+```ts
+  sourceLogId: uuid("source_log_id").references(() => dailyLogs.id, { onDelete: "set null" }),
+```
+
+Extend `invoiceItemsRelations`:
+
+```ts
+export const invoiceItemsRelations = relations(invoiceItems, ({ one }) => ({
+  invoice: one(invoices, {
+    fields: [invoiceItems.invoiceId],
+    references: [invoices.id],
+  }),
+  sourceLog: one(dailyLogs, {
+    fields: [invoiceItems.sourceLogId],
+    references: [dailyLogs.id],
+  }),
+}));
+```
+
+Note: `daily-logs.ts` already imports `invoices`; both imports cross-reference but Drizzle handles this since column refs use lazy callbacks (`() => ...`). If TS reports a circular-import error, move both columns' `.references()` to be defined via Drizzle's pgTable third-arg `(table) => ({...})` builder — but in practice this is fine.
+
+- [ ] **Step 3: Generate migration**
 
 Run: `pnpm db:generate`
-Expected: A new file appears in `drizzle/` with the ALTER TABLE statement adding `invoice_id uuid` with FK + ON DELETE SET NULL.
+Expected: A new file appears at `src/db/migrations/0014_<slug>.sql` containing two `ALTER TABLE` statements adding `invoice_id` to `daily_logs` and `source_log_id` to `invoice_items`, both with FK + ON DELETE SET NULL. Drizzle picks the slug; rename the file to `0014_invoice_log_attribution.sql` for clarity if desired (also update `meta/_journal.json` if you rename — generally easier to keep the auto-chosen name).
 
-- [ ] **Step 3: Add composite index in the migration**
+- [ ] **Step 4: Add partial index in the migration**
 
 Open the generated migration file. Append at the end:
 
 ```sql
-CREATE INDEX IF NOT EXISTS "daily_logs_project_invoice_idx"
-  ON "daily_logs" ("project_id", "invoice_id");
+CREATE INDEX IF NOT EXISTS "daily_logs_uninvoiced_idx"
+  ON "daily_logs" ("project_id")
+  WHERE "invoice_id" IS NULL;
 ```
 
-- [ ] **Step 4: Apply migration**
+(Partial index — smaller and ideal for the hot lookup `WHERE project_id = $X AND invoice_id IS NULL` used by `getUninvoicedLogsForProject` and `generateFromProject`.)
+
+- [ ] **Step 5: Apply migration**
 
 Run: `pnpm db:migrate`
 Expected: Migration applies cleanly. No errors.
 
-Verify with: `psql $DATABASE_URL -c "\d daily_logs"` and confirm `invoice_id uuid` column + `daily_logs_project_invoice_idx` index exist.
+Verify:
 
-- [ ] **Step 5: Run full test suite (smoke)**
+```bash
+psql $DATABASE_URL -c "\d daily_logs" | grep invoice_id
+psql $DATABASE_URL -c "\d invoice_items" | grep source_log_id
+psql $DATABASE_URL -c "\di daily_logs_uninvoiced_idx"
+```
+
+All three should return rows.
+
+- [ ] **Step 6: Run full test suite (smoke)**
 
 Run: `pnpm test`
 Expected: All existing tests still pass.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
-git add src/db/schema/daily-logs.ts drizzle/
-git commit -m "feat(db): add invoice_id FK on daily_logs for billing attribution"
+git add src/db/schema/daily-logs.ts src/db/schema/invoices.ts src/db/migrations/
+git commit -m "feat(db): add invoice_id on daily_logs + source_log_id on invoice_items for billing attribution"
 ```
 
 ---
@@ -275,16 +335,18 @@ import { isNull } from "drizzle-orm";
 Append the new exported function before the closing of the file (after `generateFromProject`):
 
 ```ts
+export type AutoPopulateItem = {
+  description: string;
+  quantity: string;
+  unit: string;
+  rate: string;
+  amount: string;
+  sourceLogId?: string;   // present on log-derived items; absent on preamble (mobilization)
+};
+
 export type AutoPopulateResult = {
-  preamble: { description: string; quantity: string; unit: string; rate: string; amount: string }[];
-  items: {
-    description: string;
-    quantity: string;
-    unit: string;
-    rate: string;
-    amount: string;
-    sourceLogId: string;
-  }[];
+  preamble: AutoPopulateItem[];
+  items: AutoPopulateItem[];
   clientName: string;
   clientPhone: string | null;
 };
@@ -334,7 +396,7 @@ export async function getUninvoicedLogsForProject(
       )
       .orderBy(dailyLogs.date);
 
-    const preamble: AutoPopulateResult["preamble"] = [];
+    const preamble: AutoPopulateItem[] = [];
     const shouldBillMobilization =
       project.mobilizationFee &&
       Number(project.mobilizationFee) > 0 &&
@@ -351,13 +413,13 @@ export async function getUninvoicedLogsForProject(
     }
 
     const built = buildInvoiceLineItems([], logRows as InvoiceLogRow[]);
-    const items = built.map((it) => ({
+    const items: AutoPopulateItem[] = built.map((it) => ({
       description: it.description,
       quantity: it.quantity,
       unit: it.unit,
       rate: it.rate,
       amount: it.amount,
-      sourceLogId: it.sourceLogId!,
+      sourceLogId: it.sourceLogId,
     }));
 
     return {
@@ -418,9 +480,32 @@ In `generateFromProject`, change the existing log query `.where(...)`:
 
 (`isNull` import already added in Task 3.)
 
-- [ ] **Step 2: Link logs to invoice after item insert**
+- [ ] **Step 2: Carry `sourceLogId` into `invoice_items` rows**
 
-After the `await tx.insert(invoiceItems).values(...)` block, before `revalidatePath`, add:
+Replace the existing `await tx.insert(invoiceItems).values(...)` block with:
+
+```ts
+if (items.length > 0) {
+  await tx.insert(invoiceItems).values(
+    items.map((item, idx) => ({
+      invoiceId: invoice.id,
+      description: item.description,
+      quantity: item.quantity,
+      unit: item.unit,
+      rate: item.rate,
+      amount: item.amount,
+      sortOrder: idx,
+      sourceLogId: item.sourceLogId ?? null,   // preamble (mobilization) is null; log items carry id
+    }))
+  );
+}
+```
+
+`items` here is the array returned by `buildInvoiceLineItems(preamble, logRows)` — log items already carry `sourceLogId` after Task 1.
+
+- [ ] **Step 3: Link logs to invoice after item insert**
+
+After the modified insert block above, before `revalidatePath`, add:
 
 ```ts
 const logIds = (logRows as InvoiceLogRow[]).map((l) => l.id);
@@ -438,20 +523,22 @@ Add `inArray` to the existing drizzle imports at top:
 import { eq, and, sql, isNull, inArray } from "drizzle-orm";
 ```
 
-- [ ] **Step 3: Lint + typecheck**
+- [ ] **Step 4: Lint + typecheck**
 
 Run: `pnpm lint && pnpm exec tsc --noEmit`
 Expected: No new errors.
 
-- [ ] **Step 4: Manual integration test**
+- [ ] **Step 5: Manual integration test**
 
 1. Seed DB if needed: `pnpm db:seed`.
 2. Start dev: `pnpm dev`.
 3. Open a project page with completed logs. Click "Generate Invoice from Logs".
-4. Verify invoice created. Open psql: `SELECT id, invoice_id FROM daily_logs WHERE project_id = '<id>';` — every previously-completed log should now have `invoice_id` set.
+4. Verify invoice created. Open psql:
+   - `SELECT id, invoice_id FROM daily_logs WHERE project_id = '<id>';` — every previously-completed log should now have `invoice_id` set.
+   - `SELECT description, source_log_id FROM invoice_items WHERE invoice_id = '<new-id>';` — log-derived rows should have `source_log_id` set; mobilization row (if any) should be NULL.
 5. Click button again. Expected: throws "No completed logs found for this project" (because all are now linked).
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
 git add src/lib/actions/invoice-generation.ts
@@ -491,9 +578,30 @@ export type InvoiceItemData = {
 };
 ```
 
-- [ ] **Step 2: Link logs + flip mobilization in `createInvoice`**
+- [ ] **Step 2: Write `source_log_id` into `invoice_items` on insert**
 
-In `createInvoice`, after the `if (data.items.length > 0) { await tx.insert(invoiceItems)... }` block, before `revalidatePath`, add:
+Replace the existing `if (data.items.length > 0) { await tx.insert(invoiceItems).values(...) }` block in `createInvoice` with:
+
+```ts
+if (data.items.length > 0) {
+  await tx.insert(invoiceItems).values(
+    data.items.map((item, idx) => ({
+      invoiceId: invoice.id,
+      description: item.description,
+      quantity: item.quantity,
+      unit: item.unit || null,
+      rate: item.rate,
+      amount: item.amount,
+      sortOrder: idx,
+      sourceLogId: item.sourceLogId || null,
+    }))
+  );
+}
+```
+
+- [ ] **Step 3: Link logs + flip mobilization in `createInvoice`**
+
+After the modified insert block, before `revalidatePath`, add:
 
 ```ts
 const logIds = data.items
@@ -515,12 +623,12 @@ if (hasMobilization && data.projectId) {
 }
 ```
 
-- [ ] **Step 3: Lint + typecheck**
+- [ ] **Step 4: Lint + typecheck**
 
 Run: `pnpm lint && pnpm exec tsc --noEmit`
 Expected: No errors.
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
 git add src/lib/actions/invoices.ts
@@ -534,7 +642,7 @@ git commit -m "feat(invoices): link daily logs + flip mobilization on createInvo
 **Files:**
 - Modify: `src/lib/actions/invoices.ts`
 
-- [ ] **Step 1: Update `updateInvoice`**
+- [ ] **Step 1: Update `updateInvoice` — release + re-insert with sourceLogId + relink**
 
 In `updateInvoice`, before the existing `await tx.delete(invoiceItems)...` line, add:
 
@@ -545,7 +653,26 @@ await tx
   .where(eq(dailyLogs.invoiceId, id));
 ```
 
-After the `if (data.items.length > 0) { await tx.insert(invoiceItems)... }` block, before the first `revalidatePath`, add:
+Then replace the existing `if (data.items.length > 0) { await tx.insert(invoiceItems).values(...) }` block with:
+
+```ts
+if (data.items.length > 0) {
+  await tx.insert(invoiceItems).values(
+    data.items.map((item, idx) => ({
+      invoiceId: id,
+      description: item.description,
+      quantity: item.quantity,
+      unit: item.unit || null,
+      rate: item.rate,
+      amount: item.amount,
+      sortOrder: idx,
+      sourceLogId: item.sourceLogId || null,
+    }))
+  );
+}
+```
+
+After the modified insert block, before the first `revalidatePath`, add:
 
 ```ts
 const logIds = data.items
@@ -566,6 +693,8 @@ if (hasMobilization && data.projectId) {
     .where(and(eq(projects.id, data.projectId), eq(projects.mobilizationBilled, false)));
 }
 ```
+
+**Why release-then-relink is safe in one tx:** The release UPDATE acquires row locks on every `daily_logs` row currently linked to this invoice. Postgres holds those locks until COMMIT, so a concurrent `createInvoice` calling `inArray(..., isNull(invoice_id))` blocks on those rows until this tx commits — preventing a window where another invoice could steal a log between release and relink.
 
 - [ ] **Step 2: Update `deleteInvoice`**
 
@@ -595,7 +724,10 @@ return withRLS(session.userId, session.role, async (tx) => {
     .set({ status: "cancelled", updatedAt: new Date() })
     .where(eq(invoices.id, id));
 
-  // Release linked logs
+  // Release linked logs. NOTE: un-cancelling this invoice later via updateInvoiceStatus
+  // does NOT re-link these logs — they remain `invoice_id = NULL` until re-attached via
+  // a fresh auto-populate or manual edit. Acceptable: cancellation is treated as a hard
+  // billing reversal. Documented as a known limitation in the PR description.
   await tx
     .update(dailyLogs)
     .set({ invoiceId: null, updatedAt: new Date() })
@@ -634,22 +766,54 @@ Add `sql` to existing drizzle imports if not present:
 import { eq, desc, count, sum, and, inArray, isNull, sql } from "drizzle-orm";
 ```
 
-- [ ] **Step 3: Lint + typecheck**
+- [ ] **Step 3: Surface `sourceLogId` in `getInvoice`**
+
+`getInvoice` returns `invoice_items` via `tx.select().from(invoiceItems)` ([src/lib/actions/invoices.ts:271](../../../src/lib/actions/invoices.ts#L271)). `tx.select()` with no projection returns all columns, so the new `source_log_id` column is already in the result — Drizzle exposes it as `sourceLogId` on each row automatically after the Task 2 schema change. **No code change strictly required.** But to make this explicit and robust against future refactors, replace the existing items query inside `getInvoice` with an explicit projection:
+
+```ts
+tx
+  .select({
+    id: invoiceItems.id,
+    invoiceId: invoiceItems.invoiceId,
+    description: invoiceItems.description,
+    quantity: invoiceItems.quantity,
+    unit: invoiceItems.unit,
+    rate: invoiceItems.rate,
+    amount: invoiceItems.amount,
+    sortOrder: invoiceItems.sortOrder,
+    sourceLogId: invoiceItems.sourceLogId,
+  })
+  .from(invoiceItems)
+  .where(eq(invoiceItems.invoiceId, id))
+  .orderBy(invoiceItems.sortOrder),
+```
+
+Verify the consumer page that feeds `initial` to `InvoiceForm` passes `item.sourceLogId` through. Search:
+
+```bash
+grep -rn "InvoiceForm" src/app
+```
+
+For each result, ensure the `initial.items` mapping includes `sourceLogId: item.sourceLogId ?? null` (or omits the field and lets the form default to `undefined`). If a page constructs `initial.items` with a hand-typed shape, add the field.
+
+- [ ] **Step 4: Lint + typecheck**
 
 Run: `pnpm lint && pnpm exec tsc --noEmit`
 Expected: No errors.
 
-- [ ] **Step 4: Manual integration test**
+- [ ] **Step 5: Manual integration test**
 
 1. Create an invoice via form with mobilization + 2 log items.
 2. `SELECT mobilization_billed FROM projects WHERE id='<pid>';` → `true`.
 3. `SELECT invoice_id FROM daily_logs WHERE project_id='<pid>';` → 2 rows with invoice id set.
-4. Open invoice, edit it, remove 1 log row, save.
-5. Re-check logs: 1 row linked, 1 row `NULL`.
-6. Cancel invoice (delete action).
-7. Re-check logs: both `NULL`. `mobilization_billed` → `false`.
+4. `SELECT description, source_log_id FROM invoice_items WHERE invoice_id='<iid>';` → log rows have `source_log_id` populated; mobilization row has `NULL`.
+5. **Edit-without-changes (regression guard for the unlink bug):** Open the same invoice, change only `notes`, save. Re-check `SELECT invoice_id FROM daily_logs ...` — both log rows MUST still be linked to this invoice. If they go NULL, the form did not round-trip `sourceLogId` (Task 7 Step 1) or `getInvoice` did not return it.
+6. **Edit-with-removal:** Open invoice, remove 1 log row, save.
+7. Re-check logs: 1 row linked, 1 row `NULL`.
+8. Cancel invoice (delete action).
+9. Re-check logs: both `NULL`. `mobilization_billed` → `false`.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
 git add src/lib/actions/invoices.ts
@@ -663,12 +827,11 @@ git commit -m "feat(invoices): release+relink logs on update; release on cancel"
 **Files:**
 - Modify: `src/components/forms/invoice-form.tsx`
 
-- [ ] **Step 1: Extend imports + types**
+- [ ] **Step 1: Extend imports + types + carry `sourceLogId` through `initial`**
 
-At the top of the file, add to the existing imports from `@/lib/actions`:
+The `createInvoice`/`updateInvoice` import is already present ([src/components/forms/invoice-form.tsx:7](../../../src/components/forms/invoice-form.tsx#L7)). Add only the new action import alongside it:
 
 ```ts
-import { createInvoice, updateInvoice } from "@/lib/actions/invoices";
 import { getUninvoicedLogsForProject } from "@/lib/actions/invoice-generation";
 ```
 
@@ -686,6 +849,39 @@ type LineItem = {
   amount: string;
   sourceLogId?: string;
 };
+```
+
+Extend `InvoiceFormProps.initial.items` shape to include `sourceLogId`:
+
+```ts
+items: {
+  id: string;
+  description: string;
+  quantity: string;
+  unit?: string | null;
+  rate: string;
+  amount: string;
+  sortOrder?: number | null;
+  sourceLogId?: string | null;
+}[];
+```
+
+Update the initial-items mapping inside `useState<LineItem[]>(...)` to carry sourceLogId through:
+
+```ts
+const [items, setItems] = useState<LineItem[]>(
+  initial?.items.length
+    ? initial.items.map((item) => ({
+        id: item.id,
+        description: item.description,
+        quantity: item.quantity,
+        unit: (item.unit as Unit) ?? "",
+        rate: item.rate,
+        amount: item.amount,
+        sourceLogId: item.sourceLogId ?? undefined,
+      }))
+    : [{ id: crypto.randomUUID(), description: "", quantity: "1", unit: "", rate: "", amount: "" }]
+);
 ```
 
 Replace the `units` array (in the render section, currently `const units: (Unit | "")[] = ["", "hours", "acres", "km", "tasks"];`) with:
@@ -752,6 +948,8 @@ async function onProjectChange(newId: string) {
   setError("");
   try {
     const result = await getUninvoicedLogsForProject(newId);
+    // After Task 3 type tweak, both preamble and items are `AutoPopulateItem`
+    // with `sourceLogId?: string`. Spread is type-safe; no narrowing trick needed.
     const newRows: LineItem[] = [...result.preamble, ...result.items].map((it) => ({
       id: crypto.randomUUID(),
       description: it.description,
@@ -759,7 +957,7 @@ async function onProjectChange(newId: string) {
       unit: (it.unit as Unit) ?? "",
       rate: it.rate,
       amount: it.amount,
-      sourceLogId: "sourceLogId" in it ? it.sourceLogId : undefined,
+      sourceLogId: it.sourceLogId,
     }));
     if (newRows.length === 0) {
       setError(t("noUninvoicedLogs"));
@@ -864,14 +1062,24 @@ git commit -m "feat(invoices): auto-populate items from uninvoiced logs on proje
 
 - [ ] **Step 1: Add keys to `messages/en.json`**
 
-Inside the `"invoices": { ... }` block, add:
+Inside the `"invoices": { ... }` block, add `"fromLog"` and `"noUninvoicedLogs"` after the existing `"noItems"` line (mind trailing comma):
 
 ```json
 "fromLog": "From log",
-"noUninvoicedLogs": "No uninvoiced logs for this project"
+"noUninvoicedLogs": "No uninvoiced logs for this project",
 ```
 
-(Place after the existing `"noItems"` line; mind trailing comma.)
+Also extend the existing `"units": { ... }` sub-object inside `"invoices"` to add a `"mobilization"` entry. The unit-select renders via `t(\`units.${u}\`)` ([src/components/forms/invoice-form.tsx:310](../../../src/components/forms/invoice-form.tsx#L310)); without this key, next-intl throws when the auto-populated mobilization row renders. Final shape:
+
+```json
+"units": {
+  "hours": "Hours",
+  "acres": "Acres",
+  "km": "KM",
+  "tasks": "Tasks",
+  "mobilization": "Mobilization"
+}
+```
 
 - [ ] **Step 2: Add Tamil translations to `messages/ta.json`**
 
@@ -879,7 +1087,13 @@ Inside `"invoices": { ... }`:
 
 ```json
 "fromLog": "பதிவில் இருந்து",
-"noUninvoicedLogs": "இந்தத் திட்டத்திற்கு விலைப்பட்டியலிடப்படாத பதிவுகள் இல்லை"
+"noUninvoicedLogs": "இந்தத் திட்டத்திற்கு விலைப்பட்டியலிடப்படாத பதிவுகள் இல்லை",
+```
+
+And inside `"invoices.units"` (mirror the same object structure as the existing Tamil units block):
+
+```json
+"mobilization": "இடமாற்றம்"
 ```
 
 - [ ] **Step 3: Add Sinhala translations to `messages/si.json`**
@@ -888,8 +1102,16 @@ Inside `"invoices": { ... }`:
 
 ```json
 "fromLog": "ලොගයෙන්",
-"noUninvoicedLogs": "මෙම ව්‍යාපෘතිය සඳහා ඉන්වොයිස් නොකළ ලොග් නැත"
+"noUninvoicedLogs": "මෙම ව්‍යාපෘතිය සඳහා ඉන්වොයිස් නොකළ ලොග් නැත",
 ```
+
+And inside `"invoices.units"`:
+
+```json
+"mobilization": "මොබිලයිසේෂන්"
+```
+
+(Translations are placeholders — confirm wording with the user before merge if exact terminology matters; the keys themselves are what matters for the form not to crash.)
 
 - [ ] **Step 4: Verify JSON validity**
 
@@ -903,7 +1125,7 @@ Expected: `ok`.
 
 ```bash
 git add messages/
-git commit -m "i18n: add fromLog and noUninvoicedLogs invoice strings"
+git commit -m "i18n(invoices): add fromLog, noUninvoicedLogs, units.mobilization"
 ```
 
 ---
@@ -923,11 +1145,12 @@ pnpm db:seed
 
 1. Login as admin. Navigate to `/admin/invoices/new`.
 2. Select a project that has completed daily logs.
-3. Expect: items list replaced with mobilization line (if applicable) + one row per uninvoiced log, each showing "FROM LOG" badge. Client name/phone prefilled.
+3. Expect: items list replaced with mobilization line (if applicable) + one row per uninvoiced log, each showing "FROM LOG" badge. Client name/phone prefilled. Mobilization unit label renders as "Mobilization" (no missing-translation crash).
 4. Edit qty on one row. Remove a different row. Save.
 5. Verify in psql:
    - `SELECT invoice_id FROM daily_logs WHERE project_id = '<pid>';` — only the kept log rows link to the new invoice; the removed log stays NULL.
    - `SELECT mobilization_billed FROM projects WHERE id = '<pid>';` — `true`.
+   - `SELECT description, source_log_id FROM invoice_items WHERE invoice_id = '<iid>' ORDER BY sort_order;` — kept log rows have `source_log_id` populated; mobilization row has NULL.
 
 - [ ] **Step 3: Idempotency — re-select same project**
 
@@ -936,22 +1159,37 @@ pnpm db:seed
 
 - [ ] **Step 4: Touched-state preservation**
 
-1. New invoice. Manually edit the default blank row (type description).
+1. New invoice. Manually edit the default blank row (type description "manual entry").
 2. Select a project.
 3. Expect: rows NOT replaced (admin's manual entry preserved). No badge.
+4. Without saving, inspect the items array via React DevTools (or save and reload): the row description is still "manual entry".
 
-- [ ] **Step 5: Existing button still works**
+- [ ] **Step 5: Edit-existing-invoice regression guard (covers the unlink-bug fix)**
+
+1. Open the invoice created in Step 2 for edit.
+2. Change ONLY the `notes` field. Do not touch any line item. Save.
+3. Verify in psql:
+   - `SELECT invoice_id FROM daily_logs WHERE invoice_id = '<iid>';` — same log rows still linked (count unchanged from after Step 2). If any row's `invoice_id` became NULL, the round-trip is broken — see Task 6 Step 3 + Task 7 Step 1.
+   - `SELECT count(*) FROM invoice_items WHERE invoice_id = '<iid>' AND source_log_id IS NOT NULL;` — same count as Step 2.
+
+- [ ] **Step 6: Existing button still works**
 
 1. Navigate to a project page with uninvoiced logs.
 2. Click "Generate Invoice from Logs".
 3. Verify: new invoice created. Logs now linked. Clicking again: error "No completed logs found".
 
-- [ ] **Step 6: Cancel flow**
+- [ ] **Step 7: Cancel flow**
 
 1. Cancel one of the created invoices.
 2. Verify: its logs released to `NULL`. If the invoice had mobilization and no other active invoice on the project has mobilization, `projects.mobilization_billed` flips back to `false`.
 
-- [ ] **Step 7: Final commit (if any tweaks)**
+- [ ] **Step 8: Legacy-logs known-limitation check**
+
+1. Pick a project whose daily logs were billed by an invoice created BEFORE this feature (i.e. predates the migration). Those logs have `invoice_id = NULL` because the spec did not backfill.
+2. Open `/admin/invoices/new`, select that project. Auto-populate will list those logs as "uninvoiced" even though they were already billed historically.
+3. **Expected:** admin reviews and removes them before save (this matches spec §Out of Scope). Document in PR description.
+
+- [ ] **Step 9: Final commit (if any tweaks)**
 
 If verification surfaces minor fixes, commit them. Otherwise, no commit needed.
 
@@ -960,14 +1198,21 @@ If verification surfaces minor fixes, commit them. Otherwise, no commit needed.
 ## Self-Review Notes
 
 - **Spec coverage:**
-  - Schema change → Task 2
+  - Schema (`daily_logs.invoice_id`) → Task 2 Step 1
+  - **Schema extension (`invoice_items.source_log_id`, beyond spec)** → Task 2 Step 2 — required to survive existing-invoice edit; rationale in front-matter "Spec deviation"
+  - Partial index `(project_id) WHERE invoice_id IS NULL` → Task 2 Step 4
   - `getUninvoicedLogsForProject` → Task 3
-  - `generateFromProject` alignment → Task 4
-  - `createInvoice` linking → Task 5
-  - `updateInvoice` release+relink → Task 6
-  - `deleteInvoice` release + unflip → Task 6
-  - Form touched-state + onChange + badge + sourceLogId payload → Task 7
-  - i18n → Task 8
-  - Manual E2E → Task 9
+  - `generateFromProject` alignment (filter + link + write source_log_id) → Task 4
+  - `createInvoice` linking + write source_log_id → Task 5
+  - `updateInvoice` release+reinsert(with source_log_id)+relink → Task 6 Step 1
+  - `deleteInvoice` release + unflip mobilization → Task 6 Step 2
+  - `getInvoice` surfaces sourceLogId → Task 6 Step 3
+  - Form touched-state + onChange + badge + sourceLogId round-trip → Task 7
+  - i18n (fromLog, noUninvoicedLogs, units.mobilization) → Task 8
+  - Manual E2E (incl. edit-existing regression guard + legacy-logs limitation) → Task 9
 - **Placeholders:** none.
-- **Type consistency:** `LineItem.sourceLogId` defined in Task 1 (helper) and Task 7 (form), `InvoiceItemData.sourceLogId` in Task 5, `AutoPopulateResult.items[].sourceLogId` in Task 3 — all string-typed.
+- **Type consistency:** `LineItem.sourceLogId?: string` (helper, Task 1), `InvoiceItemData.sourceLogId?: string` (server action, Task 5 Step 1), `AutoPopulateItem.sourceLogId?: string` (read action, Task 3), form `LineItem.sourceLogId?: string` and `InvoiceFormProps.initial.items[].sourceLogId?: string | null` (Task 7 Step 1). All optional + string-typed. The `null` in `initial` covers the DB-roundtrip case; the form maps `?? undefined` so internal state stays consistently `string | undefined`.
+- **Known limitations** (surface in PR description):
+  - Logs already billed by pre-feature invoices stay `invoice_id = NULL`. Future auto-populate will re-include them; admin reviews before save.
+  - Un-cancelling a previously-cancelled invoice via `updateInvoiceStatus` does NOT re-link the released logs. Cancellation is treated as a hard billing reversal.
+  - Concurrent cancellation of two mobilization-billing invoices on the same project may both observe "no other active mobilization invoice" and both unflip the mobilization flag. Rare; acceptable per spec §Concurrency.
