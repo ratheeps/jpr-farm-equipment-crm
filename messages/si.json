@@ -152,7 +152,19 @@
     },
     "deactivate": "ක්‍රියාකාරී ඳෙල්ලා",
     "noStaff": "කාර්ය මණ්ඩලය නොමැත",
-    "noStaffDesc": "පලමවර් සේවකයා එකතු කරන්න"
+    "noStaffDesc": "පලමවර් සේවකයා එකතු කරන්න",
+    "errors": {
+      "fullNameRequired": "සම්පූර්ණ නම අවශ්‍යයි",
+      "phoneRequired": "දුරකථන අංකය අවශ්‍යයි",
+      "phoneInvalid": "දුරකථන අංකය ඉලක්කම් 10ක් විය යුතුයි",
+      "phoneDuplicate": "මෙම දුරකථන අංකය දැනටමත් භාවිතයේ පවතී",
+      "passwordRequired": "මුරපදය අවශ්‍යයි",
+      "passwordTooShort": "මුරපදය අවම වශයෙන් අකුරු 6ක් විය යුතුයි",
+      "roleRequired": "භූමිකාව අවශ්‍යයි",
+      "payTypeRequired": "ගෙවීම් වර්ගය අවශ්‍යයි",
+      "payRateInvalid": "වේතන අනුපාතය වලංගු සංඛ්‍යාවක් විය යුතුයි",
+      "forbidden": "මෙය කිරීමට ඔබට අවසර නැත"
+    }
   },
   "operator": {
     "startWork": "කාර්යය ආරම්භ කරන්න",

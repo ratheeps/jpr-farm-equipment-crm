@@ -152,7 +152,19 @@
     },
     "deactivate": "செயலிழக்கச் செய்",
     "noStaff": "ஊழியர்கள் இல்லை",
-    "noStaffDesc": "முதல் ஊழியரை சேர்க்கவும்"
+    "noStaffDesc": "முதல் ஊழியரை சேர்க்கவும்",
+    "errors": {
+      "fullNameRequired": "முழு பெயர் தேவை",
+      "phoneRequired": "தொலைபேசி தேவை",
+      "phoneInvalid": "தொலைபேசி 10 இலக்கங்கள் இருக்க வேண்டும்",
+      "phoneDuplicate": "இந்த தொலைபேசி ஏற்கனவே பயன்பாட்டில் உள்ளது",
+      "passwordRequired": "கடவுச்சொல் தேவை",
+      "passwordTooShort": "கடவுச்சொல் குறைந்தது 6 எழுத்துகள் இருக்க வேண்டும்",
+      "roleRequired": "பங்கு தேவை",
+      "payTypeRequired": "ஊதிய வகை தேவை",
+      "payRateInvalid": "ஊதிய விகிதம் சரியான எண்ணாக இருக்க வேண்டும்",
+      "forbidden": "இதை செய்ய உங்களுக்கு அனுமதி இல்லை"
+    }
   },
   "operator": {
     "startWork": "வேலை தொடங்கு",
